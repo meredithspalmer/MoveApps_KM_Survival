@@ -159,12 +159,32 @@
       "orcid": "0000-0002-1416-1732",
       "affiliation": "Yale University", 
       "affiliationRor": null
+    }, 
+    {
+      "firstName": "Jasmine",
+      "middleInitials": null,
+      "lastName": "Ware",
+      "email": "Jasmine.Ware@yukon.ca",
+      "roles": ["contributor", "funder"],
+      "orcid": null,
+      "affiliation": "Yukon Government", 
+      "affiliationRor": null
+    }, 
+    {
+      "firstName": "Mike",
+      "middleInitials": null,
+      "lastName": "Suitor",
+      "email": "Mike.Suitor@yukon.ca",
+      "roles": ["contributor", "funder"],
+      "orcid": null,
+      "affiliation": "Yukon Government", 
+      "affiliationRor": null
     }
   ],
   "funding": [
     {
-      "name": "Government of Yukon",
-      "comment": "grant for App"
+      "name": "Yukon Government",
+      "comment": "Funding for app development."
     }
   ],
   "references": [
