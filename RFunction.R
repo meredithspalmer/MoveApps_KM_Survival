@@ -46,8 +46,8 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                     "deployment_end_comments", "deployment_end_type", "deployment_id", 
                     "individual_id", "individual_local_identifier",
                     "individual_number_of_deployments", "is_test", "mortality_location",
-                    "mortality_type", "sex", "tag_id", "timestamp_first_deployed_location",
-                    "timestamp_last_deployed_location")
+                    "mortality_type", "mortality_date", "sex", "tag_id", 
+                    "timestamp_first_deployed_location", "timestamp_last_deployed_location")
   
   tracks <- mt_track_data(data) |>
     mutate(mortality_location_filled = if_else(
@@ -108,13 +108,21 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
         if (all(is.na(deploy_off_timestamp))) as.POSIXct(NA) else max(deploy_off_timestamp, na.rm = TRUE)
       } else as.POSIXct(NA),
       
-      # Mortality column: 1/0 if filled if present 
+      # Mortality location column: 1/0 if filled if present 
       mortality_location_filled = if ("mortality_location_filled" %in% names(events_with_ind))
         as.integer(any(mortality_location_filled >= 1, na.rm = TRUE)) else NA_integer_,
       
       # Categorical columns: collapsed unique if present
       sex = if ("sex" %in% names(events_with_ind))
         str_c(unique(sex[!is.na(sex)]), collapse = " | ") else NA_character_,
+      
+      mortality_type = if ("mortality_type" %in% names(events_with_ind)) {
+        str_c(unique(mortality_type[!is.na(mortality_type)]), collapse = " | ")
+      } else NA_character_,
+      
+      mortality_date = if ("mortality_date" %in% names(events_with_ind)) {
+        str_c(unique(mortality_date[!is.na(mortality_date)]), collapse = " | ")
+      } else NA_character_,
       
       death_comments = if ("death_comments" %in% names(events_with_ind))
         str_c(unique(death_comments[!is.na(death_comments)]), collapse = " | ") else NA_character_,
@@ -139,22 +147,18 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     mutate(
       
       # Clean empty strings (fill NA) for columns that exist
-      across(
-        any_of(c(
-          "death_comments",
-          "deployment_end_comments",
-          "deployment_end_type",
-          "animal_life_stage",
-          "animal_reproductive_condition"
-        )),
-        ~ if_else(. == "", NA_character_, .)
-      ),
+      across(any_of(c(
+        "death_comments",
+        "mortality_type",
+        "mortality_date",
+        "deployment_end_comments",
+        "deployment_end_type",
+        "animal_life_stage",
+        "animal_reproductive_condition")),
+        ~ if_else(. == "", NA_character_, .)),
       
       # Convert deploy timestamps 
-      across(
-        any_of(c("deploy_on_timestamp", "deploy_off_timestamp")),
-        as.Date
-      )
+      across(any_of(c("deploy_on_timestamp", "deploy_off_timestamp")), as.Date)
     )
   
   
@@ -334,13 +338,14 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
   
   ## Calculate mortality indicator ---
   # Here, event = 1 if observed death, 0 if censored or survived 
-  # death comments to flag 
-  positive_pattern <- "dead|death|cod|predation|predator|vehicle|collision|killed|poach|shot|hunt|harvest|mortality"
   
-  # search in data 
+  # death comments to flag
+  positive_pattern <- "dead|death|died|cod|predation|predator|vehicle|collision|killed|poach|poached|shot|hunt|harvest|harvested|mortality"
+  
+  # search in data
   summary_table <- summary_table %>%
     
-    # Initialize mortality event 
+    # Initialize mortality event
     mutate(mortality_event = NA_real_) %>%
     
     # Identify survivors (individuals who last beyond study)
@@ -368,7 +373,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       } else mortality_location_filled
     ) %>%
     
-    # Search for mortality indicators 
+    # Search for mortality indicators
     # A. death_comments keywords
     mutate(
       mortality_event = case_when(
@@ -377,9 +382,29 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
         mortality_event == 1L ~ 1L,
         TRUE ~ mortality_event
       )
-    ) %>% 
+    ) %>%
     
-    # B. mortality_location_filled
+    # B: deployment_end_comments contains mortality keywords  
+    mutate(
+      mortality_event = case_when(
+        mortality_event == 1L ~ 1L,  
+        "deployment_end_comments" %in% names(.) &
+          str_detect(tolower(deployment_end_comments), positive_pattern) ~ 1L,
+        TRUE ~ mortality_event
+      )
+    ) %>%
+    
+    # C: mortality_type is filled (non-NA) 
+    mutate(
+      mortality_event = case_when(
+        mortality_event == 1L ~ 1L,   
+        "mortality_type" %in% names(.) &
+          !is.na(mortality_type) ~ 1L,
+        TRUE ~ mortality_event
+      )
+    ) %>%
+    
+    # C. mortality_location_filled
     mutate(
       mortality_event = case_when(
         "mortality_location_filled" %in% names(.) &
@@ -390,7 +415,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       )
     ) %>%
     
-    # C. deployment_end_type  
+    # D. deployment_end_type
     mutate(
       mortality_event = case_when(
         mortality_event == 1L ~ 1L,
@@ -403,7 +428,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
         "deployment_end_type" %in% names(.) &
           tolower(deployment_end_type) %in% c("removal", "other", "unknown", "survived beyond study") ~ 0L,
         
-        # Missing column OR NA value → censored 
+        # Missing column OR NA value → censored
         (!"deployment_end_type" %in% names(.) | is.na(deployment_end_type)) &
           is.na(mortality_event) ~ 0L,
         
@@ -411,7 +436,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       )
     ) %>%
     
-    # Final censoring: remaining NA → 0 
+    # Final censoring: remaining NA → 0 (only if we have deploy_off_timestamp)
     mutate(
       mortality_event = if_else(
         is.na(mortality_event) & !is.na(deploy_off_timestamp),
@@ -439,7 +464,18 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
   
   
   ## Clean user-defined attributes for comparison (if applicable) --- 
+  
   if(group_comparsion_individual == "sex"){
+    
+    # Ensure different conditions are present
+    non_na_unique <- unique(na.omit(summary_table$sex))
+    if (length(non_na_unique) <= 1) {
+      if (length(non_na_unique) == 0) {
+        logger.error("Warning: The grouping variable is entirely NA; no comparison is possible.")
+      } else {
+        logger.error("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+      }
+    }
     
     # Remove NAs 
     n_original <- nrow(summary_table)
@@ -461,6 +497,16 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
   }
   
   if(group_comparsion_individual == "lifestage"){
+    
+    # Ensure different conditions are present
+    non_na_unique <- unique(na.omit(summary_table$animal_life_stage))
+    if (length(non_na_unique) <= 1) {
+      if (length(non_na_unique) == 0) {
+        logger.error("Warning: The grouping variable is entirely NA; no comparison is possible.")
+      } else {
+        logger.error("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+      }
+    }
     
     # Clean data, remove NA rows
     n_original <- nrow(summary_table)
@@ -489,6 +535,16 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
   
   if(group_comparsion_individual == "reproCond"){
   
+    # Ensure different conditions are present
+    non_na_unique <- unique(na.omit(summary_table$animal_reproductive_condition))
+    if (length(non_na_unique) <= 1) {
+      if (length(non_na_unique) == 0) {
+        logger.error("Warning: The grouping variable is entirely NA; no comparison is possible.")
+      } else {
+        logger.error("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+      }
+    }
+    
     # Clean data, remove NAs 
     n_original <- nrow(summary_table)
     summary_table <- summary_table %>%
