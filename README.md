@@ -68,6 +68,8 @@ Note that a larger sample size is required for comparison across groups,
 
 **Comparison types:** This app enables the user to select one of four grouping options to compare across. These currently include sex, lifestage, reproductive condition, and collar attachment type. These grouping classifications are cleaned and standardized for capitalization and white-space errors (e.g., "male" and "Male" will register as the same class) but note that other mispecifications (e.g., "male " vs. "M") will calculate as separate groups. 
 
+Note that user can start by subsetting the entire dataset by sex, such that these comparisons can be then run on only male, female, or unsexed ('u') individuals. 
+
 
 ### Input type
 
@@ -83,15 +85,15 @@ Note that a larger sample size is required for comparison across groups,
 
 *Life table:* Output of KM survival analysis; table (`life_table.csv`) with the time, number of individuals at risk, number of events, survival, standard error, and upper/lower 95% confidence intervals. 
 
-*KM survival curve:* Plot (`km_survival_curve.png`), depicting survival over time with median survival time indicated. 
+*KM survival curve:* Plot (`km_survival_curve.png`), depicting survival over time with median survival time indicated. User can select whether plot includes risk and cumulative events tables. 
 
-*Cumulative hazard plot:* Plot (`cumulative_hazard_plot.png`), depicting total accumulated risk (expected number of accumulated deaths) over time. 
+*Cumulative hazard plot:* Plot (`cumulative_hazard_plot.png`), depicting total accumulated risk (expected number of accumulated deaths) over time. User can select whether plot includes risk and cumulative events tables. 
 
 *Log-rank test:* Output of comparing survival curves between groups; table (`logrank_table_statistics.csv`) with test statistics, degrees of freedom, p-value, and pairwise comparisons. 
 
-*Comparison KM curves:* Plot (`km_comparison_curves.png`), depicting survival curves by selected group.
+*Comparison KM curves:* Plot (`km_comparison_curves.png`), depicting survival curves by selected group. User can select whether plot includes risk and cumulative events tables. 
 
-*Comparison hazard plots:* Plot (`cumulative_hazard_comparison_plot.png`), depicting cumulative hazard plots by selected group. 
+*Comparison hazard plots:* Plot (`cumulative_hazard_comparison_plot.png`), depicting cumulative hazard plots by selected group. User can select whether plot includes risk and cumulative events tables. 
 
 
 ### Settings 
@@ -104,6 +106,8 @@ Note that a larger sample size is required for comparison across groups,
 - Removing missing data 
 
 `Censor capture-related mortality`: If capture-related mortality is a concern, this setting allows users to define a number of days post-capture to exclude from the overall analysis. Default is no censoring. Unit: `days`. 
+
+`Subset data by sex`: If user wants to perform analyses on only one sex (i.e., such that comparisons across lifestages or other conditionals could be performed by sex), this setting allows users to subset data by sex of interest. Default setting is to include all data. 
 
 `Groups for comparison`: If interested in comparing across groups, this identifies the grouping variable. Default is no group comparisons. Options currently include: 
 - Sex

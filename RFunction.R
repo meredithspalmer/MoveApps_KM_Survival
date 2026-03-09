@@ -22,6 +22,12 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
   data <- mt_filter_unique(data)                            # Exclude marked outliers 
   data <- data %>% filter_track_data(is_test == FALSE)      # Exclude data marked "test"
   
+  ## Subset based on conditon --- 
+  data <- filter_track_data(data, sex == .env$subset_condition)
+  if(!is.null(subset_condition) && group_comparison_individual == "sex"){
+    logger.warning("User has set group comparison by sex; due to user-defined data subsetting, 
+                   this dataset only contains a single sex and the comparison will note run.")
+  }
   
   ## Aggregate across multiple deployments (where present) ---
   
@@ -34,29 +40,20 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       "timestamp")))
   
   # Extract relevant track-level attributes
+  desired_cols <- c("animal_life_stage", "animal_reproductive_condition", "attachment_type",
+                    "capture_method", "capture_timestamp", "death_comments",
+                    "deploy_off_timestamp", "deploy_on_timestamp", "deployment_comments",
+                    "deployment_end_comments", "deployment_end_type", "deployment_id", 
+                    "individual_id", "individual_local_identifier",
+                    "individual_number_of_deployments", "is_test", "mortality_location",
+                    "mortality_type", "sex", "tag_id", "timestamp_first_deployed_location",
+                    "timestamp_last_deployed_location")
+  
   tracks <- mt_track_data(data) |>
     mutate(mortality_location_filled = if_else(
       is.na(mortality_location) | st_is_empty(mortality_location),
       0L, 1L)) |> 
-    dplyr::select(any_of(c(
-      "individual_local_identifier",
-      "deployment_id",
-      "individual_id",
-      "sex",
-      "animal_life_stage",
-      "animal_reproductive_condition",
-      "attachment_type",
-      "study_site",
-      "deploy_on_timestamp",
-      "deploy_off_timestamp",
-      "deployment_end_type",
-      "deployment_end_comments",
-      "death_comments",
-      "mortality_location_filled", 
-      "mortality_date",
-      "mortality_type", 
-      "timestamp_first_deployed_location",
-      "timestamp_last_deployed_location")))
+    dplyr::select(any_of(desired_cols))
   
   # Join track attributes to every event row
   use_deployment_join <- all(c("deployment_id") %in% names(events), 
@@ -177,7 +174,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       dplyr::select(-missing_timestamp_start)
     
     if (n_missing > 0) {
-      log.info(sprintf("Warning: Replaced %d missing deploy_on_timestamp value%s with first_timestamp.",
+      logger.info(sprintf("Warning: Replaced %d missing deploy_on_timestamp value%s with first_timestamp.",
                        n_missing,
                        if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
@@ -188,7 +185,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     summary_table <- summary_table %>% filter(!is.na(deploy_on_timestamp))
     
     if (n_missing > 0) {
-      log.info(sprintf("Warning: Removed %d deploy_on_timestamp value%s that were NA.", n_missing,
+      logger.info(sprintf("Warning: Removed %d deploy_on_timestamp value%s that were NA.", n_missing,
                        if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
@@ -207,7 +204,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       dplyr::select(-missing_timestamp_end)
     
     if (n_missing > 0) {
-      log.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with last_timestamp.", 
+      logger.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with last_timestamp.", 
                        n_missing,
                        if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
@@ -226,7 +223,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       dplyr::select(-missing_timestamp_end)
     
     if (n_missing > 0) {
-      log.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with current date.",
+      logger.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with current date.",
                        n_missing,
                        if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
@@ -237,7 +234,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     summary_table <- summary_table %>% filter(!is.na(deploy_off_timestamp))
     
     if (n_missing > 0) {
-      log.info(sprintf("Warning: Removed %d deploy_off_timestamp and/or deploy_on_timestamp value%s that were NA.", n_missing,
+      logger.info(sprintf("Warning: Removed %d deploy_off_timestamp and/or deploy_on_timestamp value%s that were NA.", n_missing,
                        if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
@@ -249,7 +246,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
   n_removed <- n_original - nrow(summary_table)  
   
   if (n_removed > 0) {
-    log.info(sprintf("Warning: Removed %d individual%s where deploy_off_timestamp < deploy_on_timestamp.",
+    logger.info(sprintf("Warning: Removed %d individual%s where deploy_off_timestamp < deploy_on_timestamp.",
                     n_removed, if (n_removed == 1) "" else "s"),
             call. = FALSE, immediate. = TRUE)
   }
@@ -273,7 +270,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     n_removed <- n_before - n_after
     
     if (n_removed > 0) {
-      log.info(paste0("Warning: Removed ", n_removed, " individual(s) because deploy_off_timestamp occurred within ", censor_capture_mortality, " day(s) after deploy_on_timestamp"),
+      logger.info(paste0("Warning: Removed ", n_removed, " individual(s) because deploy_off_timestamp occurred within ", censor_capture_mortality, " day(s) after deploy_on_timestamp"),
                call. = FALSE, immediate. = TRUE)
     } 
   }
@@ -317,7 +314,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     
     n_removed <- n_original - nrow(summary_table)
     if (n_removed > 0) {
-      log.info(sprintf("Warning: %d record%s did not overlap the user-defined study window and were removed.",
+      logger.info(sprintf("Warning: %d record%s did not overlap the user-defined study window and were removed.",
                       n_removed, if (n_removed == 1) "" else "s"),
               call. = FALSE, immediate. = TRUE)
     }

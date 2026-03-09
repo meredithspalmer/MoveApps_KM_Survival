@@ -54,6 +54,31 @@
       ]
     }, 
     {
+      "id": "subset_condition",
+      "name": "Subset data by sex",
+      "description": "If interested in performing analyses on only one sex, select below.",
+      "defaultValue": null,
+      "type": "DROPDOWN",
+      "options": [
+        {
+          "value": null,
+          "displayText": "All data included"
+        },
+        {
+          "value": "m",
+          "displayText": "Male individuals only"
+        }, 
+         {
+          "value": "f",
+          "displayText": "Female individuals only"
+        }, 
+         {
+          "value": "u",
+          "displayText": "Other individuals only"
+        }
+      ]
+    }, 
+    {
       "id": "censor_capture_mortality",
       "name": "Censor capture-related mortality",
       "description": "If necessary, input number of days to exclude from analysis post-capture.",
