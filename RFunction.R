@@ -8,6 +8,7 @@ library(stringr)
 library(sf)
 library(forcats)
 library(tidyr)
+library(purrr) 
 
 # logger.fatal(), logger.error(), logger.warn(), logger.info(), logger.debug(), logger.trace()
 

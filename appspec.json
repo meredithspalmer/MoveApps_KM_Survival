@@ -54,6 +54,13 @@
       ]
     }, 
     {
+      "id": "censor_capture_mortality",
+      "name": "Censor capture-related mortality",
+      "description": "If necessary, input number of days to exclude from analysis post-capture.",
+      "defaultValue": 0,
+      "type": "INTEGER"
+    }, 
+    {
       "id": "subset_condition",
       "name": "Subset data by sex",
       "description": "If interested in performing analyses on only one sex, select below.",
@@ -77,13 +84,6 @@
           "displayText": "Other individuals only"
         }
       ]
-    }, 
-    {
-      "id": "censor_capture_mortality",
-      "name": "Censor capture-related mortality",
-      "description": "If necessary, input number of days to exclude from analysis post-capture.",
-      "defaultValue": 0,
-      "type": "INTEGER"
     }, 
     {
       "id": "group_comparison_individual",
@@ -111,9 +111,20 @@
         {
           "value": "attachment",
           "displayText": "Attachment type"
+        }, 
+        {
+          "value": "survYear",
+          "displayText": "Survival year (define below)"
         }
       ]
     }, 
+    {
+        "id": "survival_yr_start",
+        "name": "Survival year start",
+        "description": "If comparing across survival years, select the start date of your survival year. Note that what is important is the day and month; year is irrelevant.",
+        "defaultValue": null,
+        "type": "INSTANT"
+    },
     {
       "id": "life_table_days",
       "name": "Generate periods for life table",
@@ -162,7 +173,8 @@
       {"name": "stringr"},
       {"name": "sf"},
       {"name": "forecats"}, 
-      {"name": "tidyr"}
+      {"name": "tidyr"}, 
+      {"name": "purrr"}
     ]
   },
   "license": {

@@ -114,6 +114,9 @@ Note that user can start by subsetting the entire dataset by sex, such that thes
 - Lifestage 
 - Reproductive condition
 - Attachment type 
+- Survival year (dates defined by user)
+
+`Survival year start date`: If comparing across survival years (see above), the user can define the day and month that each 'survival year' begins. The code assumes a year runs 365(6) days. Default is null. Unit: `date`. 
 
 `Life table length`: How often to generate statistical output in the life table (e.g., every # days). Default value is 30 days. Unit: `days`. 
 
