@@ -9,6 +9,7 @@ library(sf)
 library(forcats)
 library(tidyr)
 library(purrr) 
+library(viridis)
 
 # logger.fatal(), logger.error(), logger.warn(), logger.info(), logger.debug(), logger.trace()
 
@@ -656,11 +657,11 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       geom_segment(aes(x = plot_start, xend = plot_end,
                        y = individual_label, yend = individual_label),
                    linewidth = 3.2,
-                   color = "steelblue") +
+                   color = "#FF7F0E") +
       geom_point(aes(x = plot_start, y = individual_label),
-                 color = "darkgreen", size = 3.5) +
+                 color = "#1F77B4", size = 3.5) +
       geom_point(aes(x = plot_end, y = individual_label),
-                 color = "firebrick", size = 3.5) +
+                 color = "#9467BD", size = 3.5) +
       geom_segment(data = deployment_summary |>
                      group_by(individual_label) |>
                      arrange(plot_start) |>
@@ -1104,25 +1105,29 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     km_fit_comp <- surv_fit(surv_formula, data = yearly_survival)  # use surv_fit instead of survfit
     
     title_text <- paste0("Kaplan-Meier Survival Curve: Survival year")
-    subtitle_text <- paste0("N: ", n_total, "(", events_total, "); \nChisq: ", round(test$chisq, 3), "; \nP-value: ", round(test$pvalue, 3))
+    subtitle_text <- paste0("N: ", n_total, "(", events_total, "); Chisq: ", round(test$chisq, 3), "; P-value: ", round(test$pvalue, 3))
     
     old_strata_names <- names(km_fit_comp$strata)
     new_strata_names <- sub(".*=", "", old_strata_names)
     names(km_fit_comp$strata) <- new_strata_names
+    
     yearly_survival$survival_year <- as.factor(yearly_survival$survival_year)
+    n_groups <- nlevels(as.factor(yearly_survival$survival_year))
+    my_palette <- viridis(n_groups, option = "turbo")
+    risk_table_height <- n_groups * 0.09 #THIS NEEDS TO BE DEBUGGED 
     
     # Plot 
     if(add_risk_table == TRUE){
       km_comp_curve <- ggsurvplot(km_fit_comp,
-                                  data = summary_table,
+                                  data = yearly_survival,
                                   title = title_text,
                                   subtitle = subtitle_text,
                                   conf.int = TRUE,
                                   risk.table = TRUE,
                                   risk.table.title = "Number at risk",
-                                  risk.table.height = 0.18,
+                                  risk.table.height = risk_table_height,
                                   surv.median.line = "hv",
-                                  palette = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"), 
+                                  palette = my_palette, 
                                   xlab = "Days at risk",
                                   ylab = "Survival probability",
                                   legend.title = "Survival year",
@@ -1142,18 +1147,18 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                                       plot.margin  = margin(10, 10, 10, 10)))
     } else {
       km_comp_curve <- ggsurvplot(km_fit_comp,
-                                  data = summary_table,
+                                  data = yearly_survival,
                                   title = title_text,
                                   subtitle = subtitle_text,
                                   conf.int = TRUE,
                                   risk.table = FALSE,
                                   surv.median.line = "hv",
-                                  palette = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"), 
+                                  palette = my_palette, 
                                   xlab = "Days at risk",
                                   ylab = "Survival probability",
                                   legend.title = "Survival year",
                                   legend = "bottom",
-                                  legend.labs = levels(summary_table[[group_comparison_individual]]),
+                                  legend.labs = levels(yearly_survival$survival_year),
                                   censor.shape = "|",
                                   censor.size = 4,
                                   font.main = c(14, "bold", "black"),
@@ -1180,34 +1185,28 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     # Prepare statistics for subtitle 
     n_per_group <- km_fit_comp$n
     sum_fit <- summary(km_fit_comp)
-    events_per_group <- tapply(sum_fit$n.event, sum_fit$strata, sum, na.rm = TRUE)
-    clean_strata <- gsub("^.*=", "", names(km_fit_comp$strata))
-    subtitle_parts <- mapply(function(group, n, ev) sprintf("N(%s) = %d, Events = %d", group, n, ev),
-                             clean_strata, n_per_group, events_per_group)
-    subtitle_text <- paste(subtitle_parts, collapse = "\n")
-    test <- surv_pvalue(km_fit_comp, data = summary_table)  
-    pval_text <- sprintf("Log-rank p = %.3f", test$pval)
-    cumhaz_subtitle <- paste0(subtitle_text, "\n", pval_text)
+    test <- surv_pvalue(km_fit_comp, data = yearly_survival)  
+    cumhaz_subtitle <- sprintf("Log-rank p = %.3f", test$pval)
     
     # Plot 
     if(add_risk_table == TRUE){
       cum_hazard_comp <- ggsurvplot(km_fit_comp,
-                                    data = summary_table,
+                                    data = yearly_survival,
                                     fun          = "cumhaz",
                                     conf.int     = TRUE,
                                     censor.shape = "|",
                                     censor.size  = 4,
-                                    title        = paste0("Cumulative Hazard by ", grouping_var),
+                                    title        = paste0("Cumulative Hazard by Survival Year"),
                                     subtitle     = cumhaz_subtitle,   
                                     xlab         = "Days at risk",
                                     ylab         = "Cumulative Hazard",
                                     legend       = "bottom",
-                                    legend.title = grouping_var,
-                                    legend.labs  = levels(summary_table[[group_comparison_individual]]),
-                                    palette      = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"),
+                                    legend.title = "Survival year",
+                                    legend.labs  = levels(yearly_survival$survival_year),
+                                    palette      = my_palette,
                                     risk.table   = TRUE,
                                     cumevents    = TRUE,
-                                    tables.height = 0.18,
+                                    tables.height = risk_table_height,
                                     tables.y.text = FALSE,
                                     font.main    = c(14, "bold", "black"),
                                     font.x       = 12, font.y = 12, font.tickslab = 11,
@@ -1223,19 +1222,19 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                                             legend.text   = element_text(size = 10)))
     } else {
       cum_hazard_comp <- ggsurvplot(km_fit_comp,
-                                    data = summary_table,
+                                    data = yearly_survival,
                                     fun          = "cumhaz",
                                     conf.int     = TRUE,
                                     censor.shape = "|",
                                     censor.size  = 4,
-                                    title        = paste0("Cumulative Hazard by ", grouping_var),
+                                    title        = paste0("Cumulative Hazard by Survival Year"),
                                     subtitle     = cumhaz_subtitle,   
                                     xlab         = "Days at risk",
                                     ylab         = "Cumulative Hazard",
                                     legend       = "bottom",
-                                    legend.title = grouping_var,
-                                    legend.labs  = levels(summary_table[[group_comparison_individual]]),
-                                    palette      = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"),
+                                    legend.title = "Survival year",
+                                    legend.labs  = levels(yearly_survival$survival_year),
+                                    palette      = my_palette,
                                     risk.table   = FALSE,
                                     cumevents    = FALSE,
                                     font.main    = c(14, "bold", "black"),
@@ -1316,7 +1315,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                          "lifestage"                     = "Life-stage")
     grouping_var <- grouping_labels[[group_comparison_individual]]
     if (is.na(grouping_var)) {
-      stop("Unknown grouping variable: ", group_comparison_individual)
+      logger.error("Unknown grouping variable: ", group_comparison_individual)
     }
     title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
     subtitle_text <- paste0("N(",logrank_table$`Reproductive condition`[1],"): ", test$n[1], 
@@ -1327,6 +1326,10 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     new_strata_names <- sub(".*=", "", old_strata_names)
     names(km_fit_comp$strata) <- new_strata_names
     
+    n_groups <- length(names(km_fit_comp$strata))
+    my_palette <- viridis(n_groups, option = "turbo")
+    risk_table_height <- n_groups * 0.09 #THIS NEEDS TO BE DEBUGGED 
+      
     # Plot 
     if(add_risk_table == TRUE){
       km_comp_curve <- ggsurvplot(km_fit_comp,
@@ -1336,9 +1339,9 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                                   conf.int = TRUE,
                                   risk.table = TRUE,
                                   risk.table.title = "Number at risk",
-                                  risk.table.height = 0.18,
+                                  risk.table.height = risk_table_height,
                                   surv.median.line = "hv",
-                                  palette = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"), 
+                                  palette = my_palette, 
                                   xlab = "Days at risk",
                                   ylab = "Survival probability",
                                   legend.title = grouping_var,
@@ -1364,7 +1367,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                                   conf.int = TRUE,
                                   risk.table = FALSE,
                                   surv.median.line = "hv",
-                                  palette = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"), 
+                                  palette = my_palette, 
                                   xlab = "Days at risk",
                                   ylab = "Survival probability",
                                   legend.title = grouping_var,
@@ -1420,10 +1423,10 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                                     legend       = "bottom",
                                     legend.title = grouping_var,
                                     legend.labs  = levels(summary_table[[group_comparison_individual]]),
-                                    palette      = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"),
+                                    palette      = my_palette,
                                     risk.table   = TRUE,
                                     cumevents    = TRUE,
-                                    tables.height = 0.18,
+                                    tables.height = risk_table_height,
                                     tables.y.text = FALSE,
                                     font.main    = c(14, "bold", "black"),
                                     font.x       = 12, font.y = 12, font.tickslab = 11,
@@ -1451,7 +1454,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                                     legend       = "bottom",
                                     legend.title = grouping_var,
                                     legend.labs  = levels(summary_table[[group_comparison_individual]]),
-                                    palette      = c("#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD"),
+                                    palette      = my_palette,
                                     risk.table   = FALSE,
                                     cumevents    = FALSE,
                                     font.main    = c(14, "bold", "black"),
