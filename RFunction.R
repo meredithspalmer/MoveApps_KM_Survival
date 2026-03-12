@@ -48,7 +48,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
                     "deployment_end_comments", "deployment_end_type", "deployment_id", 
                     "individual_id", "individual_local_identifier",
                     "individual_number_of_deployments", "is_test", "mortality_location",
-                    "mortality_type", "mortality_date", "sex", "tag_id", 
+                    "model", "mortality_type", "mortality_date", "sex", "tag_id", 
                     "timestamp_first_deployed_location", "timestamp_last_deployed_location")
   
   tracks <- mt_track_data(data) |>
@@ -591,6 +591,28 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     if (n_lost > 0) {
       logger.warn(sprintf("%d individuals with NA attachment type removed from study.", n_lost), 
               call. = FALSE, immediate. = TRUE)
+    }
+  } 
+  
+  if(group_comparsion_individual == "model"){
+    
+    # Clean data, remove NAs 
+    n_original <- nrow(summary_table)
+    summary_table <- summary_table %>%
+      filter(!is.na(model)) %>%
+      mutate(
+        model = str_trim(model),
+        model = str_replace_all(model, "\\s+", ""),
+        model = str_extract(model, "^[^|]+"),
+        model = str_replace(model, "–", "-"))
+    
+    n_models <- length(unique(summary_table$model))
+    logger.info(sprintf("%d models types detected.", n_models), call. = FALSE, immediate. = TRUE)
+    
+    n_lost <- n_original - nrow(summary_table)
+    if (n_lost > 0) {
+      logger.warn(sprintf("%d individuals with NA model type removed from study.", n_lost), 
+                  call. = FALSE, immediate. = TRUE)
     }
   } 
   
@@ -1483,4 +1505,4 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
   
   # Pass original to the next app in the MoveApps workflow
   return(data)
-}
+} 

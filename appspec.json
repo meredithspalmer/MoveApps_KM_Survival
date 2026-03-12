@@ -113,6 +113,10 @@
           "displayText": "Attachment type"
         }, 
         {
+          "value": "model",
+          "displayText": "Model of tag"
+        }, 
+        {
           "value": "survYear",
           "displayText": "Survival year (define below)"
         }
@@ -128,7 +132,7 @@
     {
       "id": "life_table_days",
       "name": "Generate periods for life table",
-      "description": "Define how often to calculate survival probabilities for the life tabel (e.g., every 30 days).",
+      "description": "Define how often to calculate survival probabilities for the life table (e.g., every 30 days).",
       "defaultValue": 30,
       "type": "INTEGER"
     }, 
@@ -161,6 +165,18 @@
           "displayText": "Add risk/events tables."
         }]
     },  
+    {
+    "id": "animal_birth_hatch_year",
+    "name": "Animal birth/hatch year",
+    "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information for each individual: individual_id, individual_local_identifier, animal_birth_hatch_year (see template on GitHub). The app expects a file with the extension `.csv`.",
+    "type": "USER_FILE"
+    },
+    {
+    "id": "animal_birth_hatch_year_table",
+    "name": "Animal birth/hatch year definitions",
+    "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information: animal_life_stage, year_at_start (that is, what is the first year associated with this life stage; see template on GitHub). The app expects a file with the extension: `.csv`.",
+    "type": "USER_FILE"
+    }
   ],
   "dependencies": {
     "R": [
@@ -201,7 +217,7 @@
       "firstName": "Jasmine",
       "middleInitials": null,
       "lastName": "Ware",
-      "email": "Jasmine.Ware@yukon.ca",
+      "email": null,
       "roles": ["contributor", "funder"],
       "orcid": null,
       "affiliation": "Yukon Government", 
@@ -211,7 +227,7 @@
       "firstName": "Mike",
       "middleInitials": null,
       "lastName": "Suitor",
-      "email": "Mike.Suitor@yukon.ca",
+      "email": null,
       "roles": ["contributor", "funder"],
       "orcid": null,
       "affiliation": "Yukon Government", 

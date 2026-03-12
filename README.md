@@ -114,6 +114,7 @@ Note that user can start by subsetting the entire dataset by sex, such that thes
 - Lifestage 
 - Reproductive condition
 - Attachment type 
+- Model of tag 
 - Survival year (dates defined by user)
 
 `Survival year start date`: If comparing across survival years (see above), the user can define the day and month that each 'survival year' begins. The code assumes a year runs 365(6) days. Default is null. Unit: `date`. 
@@ -123,6 +124,8 @@ Note that user can start by subsetting the entire dataset by sex, such that thes
 `Monthly mortality plots`: Create option plots showcasing monthly mortality across years. Default is no plot. Options are include/exclude. 
 
 `Risk and mortality tables`: Add risk and cumulative events (mortality) tables to the KM and cumulative hazard plots. Default is no plot. Options are include/exclude. 
+
+ADD AUXILIARY FILE INFO 
 
 
 ### Most common errors
