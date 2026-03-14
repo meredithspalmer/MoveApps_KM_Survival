@@ -1301,11 +1301,8 @@ rFunction = function(data, sdk,
     
   
 
-  ## Survival Analysis ----------------------------------------------------------
+  ## Survival Analysis: No comparisons ----------------------------------------
   
-  ## No comparisons --- 
-  
-  ## Kaplan-Meier with staggered entry 
   if(is.null(survival_yr_start)){
     
     # Fit KM ---
@@ -1393,13 +1390,120 @@ rFunction = function(data, sdk,
     png(artifact)
     cum_hazard
     dev.off()
+  } 
+  
+  # Can also produce a single KM curve if data subset to single survival year 
+  if(!is.null(survival_yr_start) && subset_condition == "survival_year"){
+    
+    # Fit KM ---
+    km_fit <- survfit(Surv(days_at_risk, mortality_event) ~ 1, data = yearly_survival)
+    
+    # Generate life table ---
+    max_days <- max(yearly_survival$days_at_risk, na.rm = TRUE)
+    lt.length.out <- ceiling(max_days / life_table_days) + 1   
+    times <- round(seq(0, max_days, length.out = lt.length.out))
+    
+    s <- summary(km_fit, times = times, extend = TRUE)     
+    life_table <- data.frame(time_days     = s$time,
+                             n_risk        = s$n.risk,
+                             n_event       = s$n.event,
+                             survival_prob = s$surv,
+                             std_err       = s$std.err,
+                             lower_95      = s$lower,
+                             upper_95      = s$upper)
+    
+    # **unsure if the row.names will cause issues - double check 
+    write.csv(life_table, file = appArtifactPath("life_table.csv", row.names = F))
+    
+    # Plot KM curve ---
+    
+    # Extract statistics
+    n_ind    <- nrow(yearly_survival)
+    n_events <- sum(yearly_survival$mortality_event == 1, na.rm = TRUE)
+    n_censored <- n_ind - n_events
+    
+    # Median survival time — handle NA case
+    median_days <- as.numeric(summary(km_fit)$table["median"])
+    if (is.na(median_days)) {
+      median_days <- Inf
+      median_label <- "not reached (survival > 50% at end of data)"
+    } else {
+      median_label <- sprintf("%.0f days", median_days)
+    }
+    
+    # CI if available; NA median if not reached
+    med <- surv_median(km_fit)
+    if (is.na(med$median)) {
+      med$median <- Inf
+      med$lower  <- NA
+      med$upper  <- NA
+    }
+    
+    # Plot 
+    km_curve <- ggsurvplot(
+      km_fit,
+      data = yearly_survival,
+      title = "Kaplan-Meier Survival Curve",
+      subtitle = sprintf("n = %d intervals • %d deaths • %d censored • median = %s",
+                         n_ind, n_events, n_censored, median_label),
+      xlab = "Time (days)",
+      ylab = "Survival Probability",
+      risk.table = FALSE,
+      conf.int = TRUE,
+      censor.shape = "|",
+      censor.size = 3,
+      legend = "none",
+      pval = TRUE,
+      surv.median.line = "hv",        
+      palette = c("#E69F00", "#56B4E9"),
+      ggtheme = theme_classic(base_size = 12) + 
+        theme(plot.title         = element_text(face = "bold", size = 14), 
+              plot.subtitle      = element_text(size = 12, color = "gray50"),
+              axis.text          = element_text(color = "black"),
+              panel.grid.major.y = element_line(color = "gray90"), 
+              panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
+              plot.margin        = margin(10, 10, 10, 10)))
+    
+    # **want to figure out how to add width, height, units, dpi, bg to artifact 
+    artifact <- appArtifactPath("km_survival_curve.png")
+    logger.info(paste("Saving Kaplan-Meier survival curve plot:", artifact))
+    png(artifact)
+    km_curve
+    dev.off()
+    
+    # Plot cumulative hazard curve --- 
+    cum_hazard <- ggsurvplot(
+      km_fit,
+      fun = "cumhaz",
+      conf.int = TRUE,
+      risk.table = FALSE,
+      cumevents = FALSE,                 
+      surv.median.line = "hv",         
+      pval = TRUE,                     
+      xlab = "Time (days)",
+      ylab = "Cumulative Hazard",
+      title = "Cumulative Hazard",
+      subtitle = paste0("N = ", n.ind, ", Events = ", n.events), #update events 
+      palette = c("#E69F00", "#56B4E9"),
+      ggtheme = theme_classic(base_size = 12) + 
+        theme(plot.title   = element_text(face = "bold", size = 14), 
+              plot.subtitle = element_text(size = 12, color = "gray50"),
+              axis.text    = element_text(color = "black"),
+              panel.grid.major.y = element_line(color = "gray90"), 
+              panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+              plot.margin  = margin(10, 10, 10, 10)))
+    
+    # **want to figure out how to add width, height, units, dpi, bg to artifact 
+    artifact <- appArtifactPath("cumulative_hazard_plot.png")
+    logger.info(paste("Saving cumulative hazard plot:", artifact))
+    png(artifact)
+    cum_hazard
+    dev.off()
   }
   
-  FIGURE OUT FOR SURVIVAL PLOTS 
   
+  ## Survival Analysis: Group comparisons -------------------------------------
   
-  
-  ## Group comparisons ---
   if (is.null(group_comparison_individual)) {
     # do nothing 
     
