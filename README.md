@@ -24,6 +24,8 @@ This app implements fundamental Kaplan-Meier (KM) survival estimation functions.
 
 Users define a study period, can censor data to exclude post-capture mortality events, and specify how to handle missing timestamp information.
 
+**Survival year and life stages**: Users have the option define survival years; they can then optionally define life stages that progress through time. If these options are selected, output will be generated across the survival year (instead of across the study period). If a user wishes to compare survival across survival years, enter the survival year start and select 'survival year' as a grouping variable. To compare survival of different classes (e.g., ages, sexes) within a specific survival year, subset by a specific survival year and select the class of interest as the grouping variable. 
+
 Data pre-processing includes:  
 - Removing or updating empty or invalid data (according to user specification)
 - Flagging and handling marked outliers and test data  

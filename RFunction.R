@@ -14,22 +14,45 @@ library(viridis)
 # logger.fatal(), logger.error(), logger.warn(), logger.info(), logger.debug(), logger.trace()
 
 # Survival Function 
-rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start_times, fix_na_end_times, censor_capture_mortality, group_comparison_individual) {
+rFunction = function(data, sdk, 
+                     time_period_start, 
+                     time_period_end, 
+                     censor_capture_mortality,
+                     fix_na_start_times, 
+                     fix_na_end_times,  
+                     subset_condition,
+                     subset_condition_define, 
+                     group_comparison_individual,
+                     survival_yr_start,
+                     animal_birth_hatch_year, 
+                     animal_birth_hatch_year_table, 
+                     life_table_days, 
+                     calc_month_mort) {
   
   logger.info(paste("Welcome to the", sdk))
+  
+  
+  ## Load auxiliary data ------------------------------------------------------ 
+
+  if(!is.null(animal_birth_hatch_year)){
+    animal_birth_hatch_year <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year"))
+  }
+  
+  if(!is.null(animal_birth_hatch_year_table)){
+    animal_birth_hatch_year_table <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year_table"))
+  }
+  
+  if (xor(!is.null(animal_birth_hatch_year), !is.null(animal_birth_hatch_year_table))){
+    logger.error("Missing auxiliary files.")
+  }
+  
   
   ## Cleaning and cropping ----------------------------------------------------
   
   data <- dplyr::filter(data, !sf::st_is_empty(data))       # Exclude empty locations
   data <- mt_filter_unique(data)                            # Exclude marked outliers 
   data <- data %>% filter_track_data(is_test == FALSE)      # Exclude data marked "test"
-  
-  ## Subset based on conditon --- 
-  data <- filter_track_data(data, sex == .env$subset_condition)
-  if(!is.null(subset_condition) && group_comparison_individual == "sex"){
-    logger.warning("User has set group comparison by sex; due to user-defined data subsetting, 
-                   this dataset only contains a single sex and the comparison will note run.")
-  }
+
   
   ## Aggregate across multiple deployments (where present) ---
   
@@ -160,8 +183,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
         ~ if_else(. == "", NA_character_, .)),
       
       # Convert deploy timestamps 
-      across(any_of(c("deploy_on_timestamp", "deploy_off_timestamp")), as.Date)
-    )
+      across(any_of(c("deploy_on_timestamp", "deploy_off_timestamp")), as.Date))
   
   
   ## Clean dates ---
@@ -265,7 +287,7 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     n_before <- nrow(summary_table)
     
     summary_table <- summary_table %>%
-      mutate(raw_deploy_on_timestamp = deploy_on_timestamp) %>%
+      mutate(raw_deploy_on_timestamp = deploy_on_timestamp) %>%  
       mutate(censor_cutoff = deploy_on_timestamp + lubridate::days(censor_capture_mortality)) %>%
       mutate(remove_due_to_early_end = !is.na(deploy_off_timestamp) & deploy_off_timestamp <= censor_cutoff) %>%
       filter(!remove_due_to_early_end) %>%
@@ -336,25 +358,23 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
     mutate(origin_date = origin_date, 
            entry_time_days  = as.numeric(difftime(deploy_on_timestamp, origin_date, units = "days")),
            exit_time_days   = as.numeric(difftime(deploy_off_timestamp, origin_date, units = "days")))
+
   
+  ## Calculate mortality indicator --------------------------------------------
+  # Event = 1 if observed death, 0 if censored or survived 
   
-  ## Calculate mortality indicator ---
-  # Here, event = 1 if observed death, 0 if censored or survived 
-  
-  # death comments to flag
+  # Death comments to flag
   positive_pattern <- "dead|death|died|cod|predation|predator|vehicle|collision|killed|poach|poached|shot|hunt|harvest|harvested|mortality"
   
-  # search in data
+  # Search in data
   summary_table <- summary_table %>%
     
     # Initialize mortality event
     mutate(mortality_event = NA_real_) %>%
     
     # Identify survivors (individuals who last beyond study)
-    mutate(
-      survived_beyond_study = !is.na(raw_deploy_off_timestamp) &
-        raw_deploy_off_timestamp > as.Date(effective_end),
-      
+    mutate(survived_beyond_study = !is.na(raw_deploy_off_timestamp) &
+             raw_deploy_off_timestamp > as.Date(effective_end),
       mortality_event = if_else(survived_beyond_study, 0L, mortality_event),
       
       # Update columns to remove ambiguity (e.g., if animal dies after study window)
@@ -372,82 +392,61 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
       
       mortality_location_filled = if ("mortality_location_filled" %in% names(.)) {
         if_else(survived_beyond_study, 0L, mortality_location_filled)
-      } else mortality_location_filled
-    ) %>%
+      } else mortality_location_filled) %>%
     
     # Search for mortality indicators
-    # A. death_comments keywords
-    mutate(
-      mortality_event = case_when(
-        "death_comments" %in% names(.) & str_detect(tolower(death_comments), "\\bnot\\b") ~ 0L,
-        "death_comments" %in% names(.) & str_detect(tolower(death_comments), positive_pattern) ~ 1L,
-        mortality_event == 1L ~ 1L,
-        TRUE ~ mortality_event
-      )
-    ) %>%
+    # A. "death_comments" keywords
+    mutate(mortality_event = case_when(
+      "death_comments" %in% names(.) & str_detect(tolower(death_comments), "\\bnot\\b") ~ 0L,
+      "death_comments" %in% names(.) & str_detect(tolower(death_comments), positive_pattern) ~ 1L,
+      mortality_event == 1L ~ 1L,
+      TRUE ~ mortality_event)) %>%
+      
+    # B: "deployment_end_comments" contains mortality keywords  
+    mutate(mortality_event = case_when(
+      mortality_event == 1L ~ 1L,  
+      "deployment_end_comments" %in% names(.) &
+        str_detect(tolower(deployment_end_comments), positive_pattern) ~ 1L,
+      TRUE ~ mortality_event)) %>%
+      
+    # C: "mortality_type" is filled (non-NA) 
+    mutate(mortality_event = case_when(
+      mortality_event == 1L ~ 1L,   
+      "mortality_type" %in% names(.) &
+        !is.na(mortality_type) ~ 1L,
+      TRUE ~ mortality_event)) %>%
+      
+    # C. "mortality_location_filled" is filled 
+    mutate(mortality_event = case_when(
+      "mortality_location_filled" %in% names(.) &
+        mortality_location_filled >= 1 ~ 1L,
+      mortality_event == 1L ~ 1L,
+      TRUE ~ mortality_event)) %>%
     
-    # B: deployment_end_comments contains mortality keywords  
-    mutate(
-      mortality_event = case_when(
-        mortality_event == 1L ~ 1L,  
-        "deployment_end_comments" %in% names(.) &
-          str_detect(tolower(deployment_end_comments), positive_pattern) ~ 1L,
-        TRUE ~ mortality_event
-      )
-    ) %>%
-    
-    # C: mortality_type is filled (non-NA) 
-    mutate(
-      mortality_event = case_when(
-        mortality_event == 1L ~ 1L,   
-        "mortality_type" %in% names(.) &
-          !is.na(mortality_type) ~ 1L,
-        TRUE ~ mortality_event
-      )
-    ) %>%
-    
-    # C. mortality_location_filled
-    mutate(
-      mortality_event = case_when(
-        "mortality_location_filled" %in% names(.) &
-          mortality_location_filled >= 1 ~ 1L,
-        
-        mortality_event == 1L ~ 1L,
-        TRUE ~ mortality_event
-      )
-    ) %>%
-    
-    # D. deployment_end_type
-    mutate(
-      mortality_event = case_when(
-        mortality_event == 1L ~ 1L,
-        
-        # Mortality indication
-        "deployment_end_type" %in% names(.) &
-          str_detect(tolower(deployment_end_type), "\\bdead\\b|\\bdeath\\b") ~ 1L,
-        
-        # Censoring indication
-        "deployment_end_type" %in% names(.) &
-          tolower(deployment_end_type) %in% c("removal", "other", "unknown", "survived beyond study") ~ 0L,
-        
-        # Missing column OR NA value → censored
-        (!"deployment_end_type" %in% names(.) | is.na(deployment_end_type)) &
-          is.na(mortality_event) ~ 0L,
-        
-        TRUE ~ mortality_event
-      )
-    ) %>%
-    
-    # Final censoring: remaining NA → 0 (only if we have deploy_off_timestamp)
-    mutate(
-      mortality_event = if_else(
-        is.na(mortality_event) & !is.na(deploy_off_timestamp),
-        0L,
-        mortality_event
-      )
-    ) %>%
-    
-    # Clean up & relocate
+    # D. "deployment_end_type" indicates censoring vs. death 
+    mutate(mortality_event = case_when(
+      mortality_event == 1L ~ 1L,
+      
+      # Mortality indication
+      "deployment_end_type" %in% names(.) &
+        str_detect(tolower(deployment_end_type), "\\bdead\\b|\\bdeath\\b") ~ 1L,
+      
+      # Censoring indication
+      "deployment_end_type" %in% names(.) &
+        tolower(deployment_end_type) %in% c("removal", "other", "unknown", "survived beyond study") ~ 0L,
+      
+      # Missing column OR NA value → censored
+      (!"deployment_end_type" %in% names(.) | is.na(deployment_end_type)) &
+        is.na(mortality_event) ~ 0L,
+      TRUE ~ mortality_event)) %>%
+      
+    # Final censoring: remaining NA → 0 (only if we have "deploy_off_timestamp")
+    mutate(mortality_event = if_else(
+      is.na(mortality_event) & !is.na(deploy_off_timestamp),
+      0L,
+      mortality_event)) %>%
+      
+    # Clean data frame  
     select(-survived_beyond_study) %>%
     relocate(mortality_event, .after = deployment_end_type)
   
@@ -458,14 +457,263 @@ rFunction = function(data, sdk, time_period_start, time_period_end, fix_na_start
             call. = FALSE, immediate. = TRUE)
   }
   
-  # Warning: Small proportion of deaths 
+  # Produce warning: Small proportion of deaths 
   if (n_mort_events <= 10) {
     logger.warn(sprintf("Few (%d) deaths detected. Model may have low statistical power, potentially resulting in unreliable estimates and poor predictive power.", n_mort_events),
             call. = FALSE, immediate. = TRUE)
   }
   
   
-  ## Clean user-defined attributes for comparison (if applicable) --- 
+  ## Calculate survival years (if selected) -----------------------------------
+  
+  if(!is.null(survival_yr_start)){
+    
+    # Extract survival year start date 
+    start_month <- month(survival_yr_start)
+    start_day   <- mday(survival_yr_start)     
+    
+    # Function to handle invalid dates (e.g., Feb 29 in non-leap years)
+    safe_make_date <- function(year, month, day) {
+      date <- suppressWarnings(make_date(year, month, day))
+      if (is.na(date)) {
+        ym <- ymd(sprintf("%d-%02d-01", year, month)) %m-% months(1)
+        date <- ceiling_date(ym, "month") - days(1)
+      }
+      date
+    }
+    
+    # Function to assign survival year and period boundaries 
+    get_survival_period <- function(date) {
+      if (is.na(date)) return(tibble(survival_year = NA_integer_, period_start = NA_Date_, 
+                                     period_end = NA_Date_))
+      y <- year(date)
+      period_start_this_year <- safe_make_date(y, start_month, start_day)
+      
+      if (date >= period_start_this_year) {
+        survival_year <- y
+        period_start  <- period_start_this_year
+        period_end    <- safe_make_date(y + 1, start_month, start_day) - days(1)
+      } else {
+        survival_year <- y - 1
+        period_start  <- safe_make_date(y - 1, start_month, start_day)
+        period_end    <- safe_make_date(y, start_month, start_day) - days(1)
+      }
+      
+      tibble(survival_year = survival_year,
+             period_start  = period_start,
+             period_end    = period_end)
+    }
+    
+    # Vectorized helpers
+    get_survival_year  <- function(date) get_survival_period(date)$survival_year
+    
+    # Determine range of survival years present in the data 
+    date_range <- events_with_ind %>%
+      summarise(min_ts = min(timestamp, na.rm = TRUE),
+                max_ts = max(timestamp, na.rm = TRUE))
+    min_year <- get_survival_year(date_range$min_ts)
+    max_year <- get_survival_year(date_range$max_ts)
+    possible_years <- seq(min_year, max_year, by = 1)
+    
+    # Create all possible survival periods
+    possible_periods <- tibble(survival_year = possible_years) %>%
+      mutate(period_info = map(survival_year, ~ {
+        start <- safe_make_date(.x, start_month, start_day)
+        end   <- safe_make_date(.x + 1, start_month, start_day) - days(1)
+        tibble(period_start = start, period_end = end)
+      })) %>%
+      unnest(period_info)
+    
+    # Create individual-year rows 
+    yearly_survival <- summary_table %>%
+      
+      # Keep only static/animal-level info for crossing
+      dplyr::select(individual_id,
+                    individual_local_identifier,
+                    any_of(c("sex",
+                             "animal_life_stage",
+                             "attachment_type",
+                             "animal_reproductive_condition"))) %>% 
+      distinct() %>% 
+      
+      # Cross with all possible survival years
+      crossing(possible_periods) %>%
+      
+      # Bring back deployment & mortality info
+      left_join(summary_table %>%
+                  dplyr::select(individual_id, 
+                                individual_local_identifier, 
+                                deploy_on_timestamp, 
+                                deploy_off_timestamp, 
+                                any_of(c("mortality_date", 
+                                         "mortality_type", 
+                                         "death_comments", 
+                                         "deployment_end_comments", 
+                                         "deployment_end_type", 
+                                         "mortality_event", 
+                                         "first_timestamp", "last_timestamp", 
+                                         "n_locations", "n_deployments"))), 
+                by = c("individual_id", "individual_local_identifier")) %>%
+      
+      # Clip monitoring interval to the survival period
+      mutate(monitor_start = pmax(deploy_on_timestamp,  period_start, na.rm = TRUE),
+             monitor_end   = pmin(deploy_off_timestamp, period_end,   na.rm = TRUE),
+             
+             # Keep only periods where animal was monitored
+             active_in_period = monitor_start <= monitor_end & !is.na(monitor_start) & 
+               !is.na(monitor_end)) %>%
+      filter(active_in_period) %>%
+      
+      # Final entry / exit dates for this animal-year
+      mutate(entry_date = monitor_start,
+             exit_date  = monitor_end,
+             
+             # Did mortality occur **inside** this survival year?
+             died_this_year = case_when(
+               
+               # Priority 1: mortality_date exists and is inside the period
+               mortality_event == 1L &
+                 !is.na(mortality_date) &
+                 mortality_date >= period_start &
+                 mortality_date <= period_end
+               ~ TRUE,
+               
+               # Priority 2: mortality_date is NA, but mortality_event == 1 AND deploy_off inside period
+               mortality_event == 1L &
+                 is.na(mortality_date) &
+                 !is.na(deploy_off_timestamp) &
+                 deploy_off_timestamp >= period_start &
+                 deploy_off_timestamp <= period_end
+               ~ TRUE,
+               
+               # Otherwise: no death this year
+               TRUE ~ FALSE),
+             
+             # Final flags
+             mortality_event = as.integer(died_this_year),
+             censored        = as.integer(!died_this_year),
+             
+             # Reported mortality date: prefer original mortality_date, fall back to deploy_off
+             mortality_date_reported = case_when(
+               died_this_year & !is.na(mortality_date) ~ as.Date(mortality_date),
+               died_this_year &  is.na(mortality_date) ~ as.Date(deploy_off_timestamp),
+               TRUE                                    ~ NA_Date_),
+             
+             # Carry mortality metadata only when we flag a death
+             mortality_type          = if_else(died_this_year, mortality_type,          NA_character_),
+             death_comments          = if_else(died_this_year, death_comments,          NA_character_),
+             deployment_end_comments = if_else(died_this_year, deployment_end_comments, NA_character_),
+             deployment_end_type     = if_else(died_this_year, deployment_end_type,     NA_character_),
+             
+             # Days monitored in this survival year
+             days_at_risk = as.integer(exit_date - entry_date) + 1L) %>%
+      
+      # Final cleaning
+      arrange(individual_id, survival_year)
+  }
+  
+  
+  ## Calculate life stages per year (if selected) -----------------------------
+
+  # Note: this needs both auxiliary files to be loaded (errors earlier in code upon loading) 
+  # Note: this needs "survival_yr_start" to be defined 
+  if(!is.null(animal_birth_hatch_year) && is.null(survival_yr_start)){
+    logger.error("Calculating life-stage requires survival years to be defined.")
+  } 
+  
+  if(!is.null(survival_yr_start) && !is.null(animal_birth_hatch_year)){
+    
+    # Join birth_hatch_year 
+    yearly_survival <- yearly_survival %>%
+      left_join(animal_birth_hatch_year %>% 
+                  select(individual_id, animal_birth_hatch_year),
+                by = "individual_id")
+    
+    # Calculate age and age_class
+    yearly_survival <- yearly_survival %>%
+      mutate(age       = survival_year - animal_birth_hatch_year,
+             age       = as.integer(pmax(0, age)))
+    
+    # repare thresholds from your existing table  
+    thresholds <- animal_birth_hatch_year_table %>%
+      filter(!is.na(year_at_start)) %>%           
+      arrange(year_at_start) %>%
+      distinct(year_at_start, animal_life_stage)
+    
+    # Create a named vector for fast lookup
+    stage_lookup <- setNames(thresholds$animal_life_stage,
+                             thresholds$year_at_start)
+    
+    # Dynamic assignment 
+    yearly_survival <- yearly_survival %>%
+      mutate(matched_threshold = findInterval(age, thresholds$year_at_start),
+             animal_life_stage_new = case_when(
+               is.na(age)                                ~ "unknown",           
+               matched_threshold == 0                    ~ "unknown",            
+               TRUE                                      ~ stage_lookup[matched_threshold]),
+             animal_life_stage_new = coalesce(
+               animal_life_stage_new,
+               animal_birth_hatch_year_table %>%
+                 filter(is.na(year_at_start)) %>%
+                 pull(animal_life_stage) %>%
+                 first(default = "adult"))) %>% 
+      select(-matched_threshold)
+  }
+
+  
+  ## Subset based on condition (if selected) ----------------------------------
+  
+  if (subset_condition == "sex") {
+    if (is.null(survival_yr_start)) {
+      summary_table <- summary_table %>% filter(sex == subset_condition_define)
+    } else {
+      yearly_survival <- yearly_survival %>% filter(sex == subset_condition_define)
+    }
+  } 
+  
+  if (subset_condition == "attachment_type") {
+    if (is.null(survival_yr_start)) {
+      summary_table <- summary_table %>% filter(attachment_type == subset_condition_define)
+    } else {
+      yearly_survival <- yearly_survival %>% filter(attachment_type == subset_condition_define)
+    }
+  } 
+  
+  if (subset_condition == "model") {
+    if (is.null(survival_yr_start)) {
+      summary_table <- summary_table %>% filter(model == subset_condition_define) 
+    } else {
+      yearly_survival <- yearly_survival %>% filter(model == as.integer(subset_condition_define))
+    }
+  } 
+  
+  if (subset_condition == "lifestage") {
+    if (is.null(survival_yr_start)) {
+      logger.error("This subset only makes sense when data are processed by survival year. 
+                   Please enter survival year start date.")
+    } else {
+      yearly_survival <- yearly_survival %>% filter(animal_life_stage_new == subset_condition_define)
+    }
+  } 
+  
+  if (subset_condition == "survival_year") {
+    if (is.null(survival_yr_start)) {
+      logger.error("This subset only makes sense when data are processed by survival year. 
+                   Please enter survival year start date.")
+    } else {
+      yearly_survival <- yearly_survival %>% filter(survival_year == as.integer(subset_condition_define))
+    }
+  }
+  
+  if(!is.null(subset_condition)){
+    if(is.null(survival_yr_start) && nrow(summary_table) == 0){
+      logger.fatal("There are no individuals meeting the subsetting condition.")
+    } else if(!is.null(survival_yr_start) && nrow(yearly_survival) == 0){
+      logger.fatal("There are no individuals meeting the subsetting condition.")
+    }
+
+    
+  ## Clean user-defined grouping attributes (if selected) ---------------------
   
   if(group_comparsion_individual == "sex"){
     
