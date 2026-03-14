@@ -715,155 +715,292 @@ rFunction = function(data, sdk,
     
   ## Clean user-defined grouping attributes (if selected) ---------------------
   
-  if(group_comparsion_individual == "sex"){
-    
-    # Ensure different conditions are present
-    non_na_unique <- unique(na.omit(summary_table$sex))
-    if (length(non_na_unique) <= 1) {
-      if (length(non_na_unique) == 0) {
-        logger.error("Warning: The grouping variable is entirely NA; no comparison is possible.")
-      } else {
-        logger.error("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-      }
-    }
-    
-    # Remove NAs 
-    n_original <- nrow(summary_table)
-    summary_table <- summary_table[!is.na(summary_table$sex),] 
-    
-    # Get unique sexes after cleaning
-    unique_sexes <- sort(unique(summary_table$sex))
-    n_sexes <- length(unique_sexes)
-    
-    logger.info(sprintf("%d sexes detected after cleaning: %s", n_sexes, 
-                    paste(unique_sexes, collapse = ", ")),
-            call. = FALSE, immediate. = TRUE)
-    
-    n_lost <- n_original - nrow(summary_table)
-    if (n_lost > 0) {
-      logger.warn(sprintf("%d individuals with NA sex removed from study.", n_lost),
-              call. = FALSE, immediate. = TRUE)
-    }
-  }
-  
-  if(group_comparsion_individual == "lifestage"){
-    
-    # Ensure different conditions are present
-    non_na_unique <- unique(na.omit(summary_table$animal_life_stage))
-    if (length(non_na_unique) <= 1) {
-      if (length(non_na_unique) == 0) {
-        logger.error("Warning: The grouping variable is entirely NA; no comparison is possible.")
-      } else {
-        logger.error("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-      }
-    }
-    
-    # Clean data, remove NA rows
-    n_original <- nrow(summary_table)
-    summary_table <- summary_table %>%
-      filter(!is.na(animal_life_stage)) %>%
-      mutate(
-        animal_life_stage = str_trim(animal_life_stage),
-        animal_life_stage = str_replace_all(animal_life_stage, "\\s+", ""),
-        animal_life_stage = str_extract(animal_life_stage, "^[^|]+"),
-        animal_life_stage = str_replace(animal_life_stage, "–", "-"))
-    
-    # Get unique life-stages after cleaning
-    unique_stages <- sort(unique(summary_table$animal_life_stage))
-    n_life_stages <- length(unique_stages)
-    
-    logger.info(sprintf("%d life-stages detected after cleaning: %s", n_life_stages, 
-                        paste(unique_stages, collapse = ", ")),
+    if(group_comparsion_individual == "sex"){
+      
+      if(is.null(survival_yr_start)){
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(summary_table$sex))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # Remove NAs 
+        n_original <- nrow(summary_table)
+        summary_table <- summary_table[!is.na(summary_table$sex),] 
+        
+        # Get unique sexes after cleaning
+        unique_sexes <- sort(unique(summary_table$sex))
+        n_sexes <- length(unique_sexes)
+        
+        logger.info(sprintf("%d sexes detected after cleaning: %s", n_sexes, 
+                        paste(unique_sexes, collapse = ", ")),
                 call. = FALSE, immediate. = TRUE)
-    
-    n_lost <- n_original - nrow(summary_table)
-    if (n_lost > 0) {
-      logger.warn(sprintf("%d individuals with NA life stage removed from study.", n_lost),
-              call. = FALSE, immediate. = TRUE)
-    }
-  }
-  
-  if(group_comparsion_individual == "reproCond"){
-  
-    # Ensure different conditions are present
-    non_na_unique <- unique(na.omit(summary_table$animal_reproductive_condition))
-    if (length(non_na_unique) <= 1) {
-      if (length(non_na_unique) == 0) {
-        logger.error("Warning: The grouping variable is entirely NA; no comparison is possible.")
-      } else {
-        logger.error("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-      }
-    }
-    
-    # Clean data, remove NAs 
-    n_original <- nrow(summary_table)
-    summary_table <- summary_table %>%
-      filter(!is.na(animal_reproductive_condition)) %>%
-      mutate(
-        animal_reproductive_condition = str_trim(animal_reproductive_condition),
-        animal_reproductive_condition = str_replace_all(animal_reproductive_condition, "\\s+", ""),
-        animal_reproductive_condition = str_extract(animal_reproductive_condition, "^[^|]+"),
-        animal_reproductive_condition = str_replace(animal_reproductive_condition, "–", "-"))
-    
-    # Get unique conditions after cleaning
-    unique_conditions <- sort(unique(summary_table$animal_reproductive_condition))
-    n_conditions <- length(unique_conditions)
-    
-    logger.info(sprintf("%d reproductive conditions detected after cleaning: %s", n_conditions, 
-                        paste(unique_conditions, collapse = ", ")),
-                call. = FALSE, immediate. = TRUE)
-    
-    n_lost <- n_original - nrow(summary_table)
-    if (n_lost > 0) {
-      logger.warn(sprintf("%d individuals with NA reproductive conditions removed from study.", n_lost),
-              call. = FALSE, immediate. = TRUE)
-    }
-  }
-  
-  if(group_comparsion_individual == "attachment"){
-    
-    # Clean data, remove NAs 
-    n_original <- nrow(summary_table)
-    summary_table <- summary_table %>%
-      filter(!is.na(attachment_type)) %>%
-      mutate(
-        attachment = str_trim(attachment_type),
-        attachment = str_replace_all(attachment_type, "\\s+", ""),
-        attachment = str_extract(attachment_type, "^[^|]+"),
-        attachment = str_replace(attachment_type, "–", "-"))
-    
-    n_attaches <- length(unique(summary_table$attachment))
-    logger.info(sprintf("%d attachment types detected.", n_attaches), call. = FALSE, immediate. = TRUE)
-    
-    n_lost <- n_original - nrow(summary_table)
-    if (n_lost > 0) {
-      logger.warn(sprintf("%d individuals with NA attachment type removed from study.", n_lost), 
-              call. = FALSE, immediate. = TRUE)
-    }
-  } 
-  
-  if(group_comparsion_individual == "model"){
-    
-    # Clean data, remove NAs 
-    n_original <- nrow(summary_table)
-    summary_table <- summary_table %>%
-      filter(!is.na(model)) %>%
-      mutate(
-        model = str_trim(model),
-        model = str_replace_all(model, "\\s+", ""),
-        model = str_extract(model, "^[^|]+"),
-        model = str_replace(model, "–", "-"))
-    
-    n_models <- length(unique(summary_table$model))
-    logger.info(sprintf("%d models types detected.", n_models), call. = FALSE, immediate. = TRUE)
-    
-    n_lost <- n_original - nrow(summary_table)
-    if (n_lost > 0) {
-      logger.warn(sprintf("%d individuals with NA model type removed from study.", n_lost), 
+        
+        n_lost <- n_original - nrow(summary_table)
+        if (n_lost > 0) {
+          logger.warn(sprintf("%d individuals with NA sex removed from study.", n_lost),
                   call. = FALSE, immediate. = TRUE)
+        }
+        
+      } else {
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(yearly_survival$sex))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # remove NAs 
+        n_original      <- nrow(yearly_survival)
+        yearly_survival <- yearly_survival[!is.na(yearly_survival$sex),] 
+        
+        # Get unique sexes after cleaning
+        unique_sexes <- sort(unique(yearly_survival$sex))
+        n_sexes      <- length(unique_sexes)
+        
+        logger.info(sprintf("%d sexes detected after cleaning: %s", n_sexes, 
+                        paste(unique_sexes, collapse = ", ")),
+                call. = FALSE, immediate. = TRUE)
+        
+        n_lost <- n_original - nrow(yearly_survival)
+        if (n_lost > 0) {
+          logger.info(sprintf("%d individuals with NA sex removed from study.", n_lost),
+                  call. = FALSE, immediate. = TRUE)
+        }
+      }
     }
-  } 
-  
+    
+    if(group_comparsion_individual == "lifestage"){
+      
+      if(is.null(survival_yr_start)){ 
+        logger.error("This comparison only makes sense if survival years are defined.")
+        
+      } else {
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(yearly_survival$animal_life_stage_new))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # Remove NAs 
+        n_original      <- nrow(yearly_survival)
+        yearly_survival <- yearly_survival[!is.na(yearly_survival$animal_life_stage_new),] 
+        
+        # Get unique life-stages after cleaning
+        unique_stages  <- sort(unique(yearly_survival$animal_life_stage_new))
+        n_life_stages  <- length(unique_stages)
+        
+        logger.info(sprintf("%d life-stages detected after cleaning: %s", n_life_stages, 
+                            paste(unique_stages, collapse = ", ")),
+                    call. = FALSE, immediate. = TRUE)
+        
+        n_lost <- n_original - nrow(yearly_survival)
+        if (n_lost > 0) {
+          logger.info(sprintf("%d individuals with NA life-stage removed from study.", n_lost),
+                  call. = FALSE, immediate. = TRUE)
+        }
+      }
+    }
+    
+    if(group_comparsion_individual == "model"){
+      
+      if(is.null(survival_yr_start)){
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(summary_table$model))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # Clean data, remove NAs 
+        n_original <- nrow(summary_table)
+        summary_table <- summary_table %>%
+          filter(!is.na(model)) %>%
+          mutate(model = str_trim(model),
+                 model = str_replace_all(model, "\\s+", ""),
+                 model = str_extract(model, "^[^|]+"),
+                 model = str_replace(model, "–", "-"))
+            
+        # Get unique conditions after cleaning
+        unique_conditions <- sort(unique(summary_table$model))
+        n_conditions <- length(unique_conditions)
+        
+        logger.info(sprintf("%d models detected after cleaning: %s", n_conditions,
+                            paste(unique_conditions, collapse = ", ")),
+                    call. = FALSE, immediate. = TRUE)
+        
+        n_lost <- n_original - nrow(summary_table)
+        if (n_lost > 0) {
+          logger.info(sprintf("%d individuals with NA model removed from study.", n_lost),
+                  call. = FALSE, immediate. = TRUE)
+        }
+        
+      } else {
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(yearly_survival$model))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # Clean data, remove NAs 
+        n_original      <- nrow(yearly_survival)
+        yearly_survival <- yearly_survival %>%
+          filter(!is.na(model)) %>%
+          mutate(model = str_trim(model),
+                 model = str_replace_all(model, "\\s+", ""),
+                 model = str_extract(model, "^[^|]+"),
+                 model = str_replace(model, "–", "-"))
+            
+        # Get unique conditions after cleaning
+        unique_conditions <- sort(unique(yearly_survival$model))
+        n_conditions      <- length(unique_conditions)
+        
+        logger.info(sprintf("%d models detected after cleaning: %s", n_conditions, 
+                            paste(unique_conditions, collapse = ", ")),
+                    call. = FALSE, immediate. = TRUE)
+        
+        n_lost <- n_original - nrow(yearly_survival)
+        if (n_lost > 0) {
+          logger.info(sprintf("%d individuals with NA model removed from study.", n_lost),
+                      call. = FALSE, immediate. = TRUE)
+        }
+      } 
+    }
+    
+    if(group_comparsion_individual == "attachment"){
+      
+      if(is.null(survival_yr_start)){
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(summary_table$attachment))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # Clean data, remove NAs 
+        n_original    <- nrow(summary_table)
+        summary_table <- summary_table %>%
+          filter(!is.na(attachment)) %>%
+          mutate(attachment = str_trim(attachment),
+                 attachment = str_replace_all(attachment, "\\s+", ""),
+                 attachment = str_extract(attachment, "^[^|]+"),
+                 attachment = str_replace(attachment, "–", "-"))
+        
+        # Get unique conditions after cleaning
+        unique_conditions <- sort(unique(summary_table$attachment))
+        n_conditions <- length(unique_conditions)
+        
+        logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions,
+                            paste(unique_conditions, collapse = ", ")),
+                    call. = FALSE, immediate. = TRUE)
+        
+        n_lost <- n_original - nrow(summary_table)
+        if (n_lost > 0) {
+          logger.info(sprintf("%d individuals with NA attachment types removed from study.", n_lost),
+                      call. = FALSE, immediate. = TRUE)
+        }
+        
+      } else {
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(yearly_survival$attachment))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # Clean data, remove NAs 
+        n_original      <- nrow(yearly_survival)
+        yearly_survival <- yearly_survival %>%
+          filter(!is.na(attachment)) %>%
+          mutate(attachment = str_trim(attachment),
+                 attachment = str_replace_all(attachment, "\\s+", ""),
+                 attachment = str_extract(attachment, "^[^|]+"),
+                 attachment = str_replace(attachment, "–", "-"))
+        
+        # Get unique conditions after cleaning
+        unique_conditions <- sort(unique(yearly_survival$attachment))
+        n_conditions      <- length(unique_conditions)
+        
+        logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions, 
+                            paste(unique_conditions, collapse = ", ")),
+                    call. = FALSE, immediate. = TRUE)
+        
+        n_lost <- n_original - nrow(yearly_survival)
+        if (n_lost > 0) {
+          logger.info(sprintf("%d individuals with NA attachment type removed from study.", n_lost),
+                      call. = FALSE, immediate. = TRUE)
+        }
+      } 
+    }
+   
+    if(group_comparsion_individual == "survYear"){
+      
+      if(is.null(survival_yr_start)){ 
+        logger.error("This comparison only makes sense if survival years are defined.")
+        
+      } else {
+        
+        # Ensure different conditions are present
+        non_na_unique <- unique(na.omit(yearly_survival$survival_year))
+        if (length(non_na_unique) <= 1) {
+          if (length(non_na_unique) == 0) {
+            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+          } else {
+            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+          }
+        }
+        
+        # Remove NAs 
+        n_original      <- nrow(yearly_survival)
+        yearly_survival <- yearly_survival[!is.na(yearly_survival$survival_year),] 
+        
+        # Get unique life-stages after cleaning
+        unique_surv_yrs  <- sort(unique(yearly_survival$survival_year))
+        n_surv_yrs       <- length(unique_surv_yrs)
+        
+        logger.info(sprintf("%d survival years detected after cleaning: %s", n_surv_yrs, 
+                            paste(unique_surv_yrs, collapse = ", ")),
+                    call. = FALSE, immediate. = TRUE)
+        
+        n_lost <- n_original - nrow(yearly_survival)
+        if (n_lost > 0) {
+          logger.info(sprintf("%d individuals with NA survival year removed from study.", n_lost),
+                      call. = FALSE, immediate. = TRUE)
+        }
+      }
+    }
+    
   
   ## Basic summaries of data --------------------------------------------------
   
