@@ -711,360 +711,497 @@ rFunction = function(data, sdk,
     } else if(!is.null(survival_yr_start) && nrow(yearly_survival) == 0){
       logger.fatal("There are no individuals meeting the subsetting condition.")
     }
+  }
 
     
   ## Clean user-defined grouping attributes (if selected) ---------------------
   
-    if(group_comparsion_individual == "sex"){
+  if(group_comparsion_individual == "sex"){
+    
+    if(is.null(survival_yr_start)){
       
-      if(is.null(survival_yr_start)){
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(summary_table$sex))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # Remove NAs 
-        n_original <- nrow(summary_table)
-        summary_table <- summary_table[!is.na(summary_table$sex),] 
-        
-        # Get unique sexes after cleaning
-        unique_sexes <- sort(unique(summary_table$sex))
-        n_sexes <- length(unique_sexes)
-        
-        logger.info(sprintf("%d sexes detected after cleaning: %s", n_sexes, 
-                        paste(unique_sexes, collapse = ", ")),
-                call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(summary_table)
-        if (n_lost > 0) {
-          logger.warn(sprintf("%d individuals with NA sex removed from study.", n_lost),
-                  call. = FALSE, immediate. = TRUE)
-        }
-        
-      } else {
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(yearly_survival$sex))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # remove NAs 
-        n_original      <- nrow(yearly_survival)
-        yearly_survival <- yearly_survival[!is.na(yearly_survival$sex),] 
-        
-        # Get unique sexes after cleaning
-        unique_sexes <- sort(unique(yearly_survival$sex))
-        n_sexes      <- length(unique_sexes)
-        
-        logger.info(sprintf("%d sexes detected after cleaning: %s", n_sexes, 
-                        paste(unique_sexes, collapse = ", ")),
-                call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(yearly_survival)
-        if (n_lost > 0) {
-          logger.info(sprintf("%d individuals with NA sex removed from study.", n_lost),
-                  call. = FALSE, immediate. = TRUE)
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(summary_table$sex))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
         }
       }
-    }
-    
-    if(group_comparsion_individual == "lifestage"){
       
-      if(is.null(survival_yr_start)){ 
-        logger.error("This comparison only makes sense if survival years are defined.")
-        
-      } else {
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(yearly_survival$animal_life_stage_new))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # Remove NAs 
-        n_original      <- nrow(yearly_survival)
-        yearly_survival <- yearly_survival[!is.na(yearly_survival$animal_life_stage_new),] 
-        
-        # Get unique life-stages after cleaning
-        unique_stages  <- sort(unique(yearly_survival$animal_life_stage_new))
-        n_life_stages  <- length(unique_stages)
-        
-        logger.info(sprintf("%d life-stages detected after cleaning: %s", n_life_stages, 
-                            paste(unique_stages, collapse = ", ")),
-                    call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(yearly_survival)
-        if (n_lost > 0) {
-          logger.info(sprintf("%d individuals with NA life-stage removed from study.", n_lost),
+      # Remove NAs 
+      n_original <- nrow(summary_table)
+      summary_table <- summary_table[!is.na(summary_table$sex),] 
+      
+      # Get unique sexes after cleaning
+      unique_sexes <- sort(unique(summary_table$sex))
+      n_sexes <- length(unique_sexes)
+      
+      logger.info(sprintf("%d sexes detected after cleaning: %s", n_sexes, 
+                          paste(unique_sexes, collapse = ", ")),
                   call. = FALSE, immediate. = TRUE)
+      
+      n_lost <- n_original - nrow(summary_table)
+      if (n_lost > 0) {
+        logger.warn(sprintf("%d individuals with NA sex removed from study.", n_lost),
+                    call. = FALSE, immediate. = TRUE)
+      }
+      
+    } else {
+      
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(yearly_survival$sex))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
         }
       }
-    }
-    
-    if(group_comparsion_individual == "model"){
       
-      if(is.null(survival_yr_start)){
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(summary_table$model))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # Clean data, remove NAs 
-        n_original <- nrow(summary_table)
-        summary_table <- summary_table %>%
-          filter(!is.na(model)) %>%
-          mutate(model = str_trim(model),
-                 model = str_replace_all(model, "\\s+", ""),
-                 model = str_extract(model, "^[^|]+"),
-                 model = str_replace(model, "–", "-"))
-            
-        # Get unique conditions after cleaning
-        unique_conditions <- sort(unique(summary_table$model))
-        n_conditions <- length(unique_conditions)
-        
-        logger.info(sprintf("%d models detected after cleaning: %s", n_conditions,
-                            paste(unique_conditions, collapse = ", ")),
-                    call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(summary_table)
-        if (n_lost > 0) {
-          logger.info(sprintf("%d individuals with NA model removed from study.", n_lost),
+      # remove NAs 
+      n_original      <- nrow(yearly_survival)
+      yearly_survival <- yearly_survival[!is.na(yearly_survival$sex),] 
+      
+      # Get unique sexes after cleaning
+      unique_sexes <- sort(unique(yearly_survival$sex))
+      n_sexes      <- length(unique_sexes)
+      
+      logger.info(sprintf("%d sexes detected after cleaning: %s", n_sexes, 
+                          paste(unique_sexes, collapse = ", ")),
                   call. = FALSE, immediate. = TRUE)
-        }
-        
-      } else {
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(yearly_survival$model))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # Clean data, remove NAs 
-        n_original      <- nrow(yearly_survival)
-        yearly_survival <- yearly_survival %>%
-          filter(!is.na(model)) %>%
-          mutate(model = str_trim(model),
-                 model = str_replace_all(model, "\\s+", ""),
-                 model = str_extract(model, "^[^|]+"),
-                 model = str_replace(model, "–", "-"))
-            
-        # Get unique conditions after cleaning
-        unique_conditions <- sort(unique(yearly_survival$model))
-        n_conditions      <- length(unique_conditions)
-        
-        logger.info(sprintf("%d models detected after cleaning: %s", n_conditions, 
-                            paste(unique_conditions, collapse = ", ")),
-                    call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(yearly_survival)
-        if (n_lost > 0) {
-          logger.info(sprintf("%d individuals with NA model removed from study.", n_lost),
-                      call. = FALSE, immediate. = TRUE)
-        }
-      } 
-    }
-    
-    if(group_comparsion_individual == "attachment"){
       
-      if(is.null(survival_yr_start)){
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(summary_table$attachment))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # Clean data, remove NAs 
-        n_original    <- nrow(summary_table)
-        summary_table <- summary_table %>%
-          filter(!is.na(attachment)) %>%
-          mutate(attachment = str_trim(attachment),
-                 attachment = str_replace_all(attachment, "\\s+", ""),
-                 attachment = str_extract(attachment, "^[^|]+"),
-                 attachment = str_replace(attachment, "–", "-"))
-        
-        # Get unique conditions after cleaning
-        unique_conditions <- sort(unique(summary_table$attachment))
-        n_conditions <- length(unique_conditions)
-        
-        logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions,
-                            paste(unique_conditions, collapse = ", ")),
+      n_lost <- n_original - nrow(yearly_survival)
+      if (n_lost > 0) {
+        logger.info(sprintf("%d individuals with NA sex removed from study.", n_lost),
                     call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(summary_table)
-        if (n_lost > 0) {
-          logger.info(sprintf("%d individuals with NA attachment types removed from study.", n_lost),
-                      call. = FALSE, immediate. = TRUE)
-        }
-        
-      } else {
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(yearly_survival$attachment))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # Clean data, remove NAs 
-        n_original      <- nrow(yearly_survival)
-        yearly_survival <- yearly_survival %>%
-          filter(!is.na(attachment)) %>%
-          mutate(attachment = str_trim(attachment),
-                 attachment = str_replace_all(attachment, "\\s+", ""),
-                 attachment = str_extract(attachment, "^[^|]+"),
-                 attachment = str_replace(attachment, "–", "-"))
-        
-        # Get unique conditions after cleaning
-        unique_conditions <- sort(unique(yearly_survival$attachment))
-        n_conditions      <- length(unique_conditions)
-        
-        logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions, 
-                            paste(unique_conditions, collapse = ", ")),
-                    call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(yearly_survival)
-        if (n_lost > 0) {
-          logger.info(sprintf("%d individuals with NA attachment type removed from study.", n_lost),
-                      call. = FALSE, immediate. = TRUE)
-        }
-      } 
-    }
-   
-    if(group_comparsion_individual == "survYear"){
-      
-      if(is.null(survival_yr_start)){ 
-        logger.error("This comparison only makes sense if survival years are defined.")
-        
-      } else {
-        
-        # Ensure different conditions are present
-        non_na_unique <- unique(na.omit(yearly_survival$survival_year))
-        if (length(non_na_unique) <= 1) {
-          if (length(non_na_unique) == 0) {
-            logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
-          } else {
-            logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
-          }
-        }
-        
-        # Remove NAs 
-        n_original      <- nrow(yearly_survival)
-        yearly_survival <- yearly_survival[!is.na(yearly_survival$survival_year),] 
-        
-        # Get unique life-stages after cleaning
-        unique_surv_yrs  <- sort(unique(yearly_survival$survival_year))
-        n_surv_yrs       <- length(unique_surv_yrs)
-        
-        logger.info(sprintf("%d survival years detected after cleaning: %s", n_surv_yrs, 
-                            paste(unique_surv_yrs, collapse = ", ")),
-                    call. = FALSE, immediate. = TRUE)
-        
-        n_lost <- n_original - nrow(yearly_survival)
-        if (n_lost > 0) {
-          logger.info(sprintf("%d individuals with NA survival year removed from study.", n_lost),
-                      call. = FALSE, immediate. = TRUE)
-        }
       }
     }
-    
+  }
   
-  ## Basic summaries of data --------------------------------------------------
+  if(group_comparsion_individual == "lifestage"){
+    
+    if(is.null(survival_yr_start)){ 
+      logger.error("This comparison only makes sense if survival years are defined.")
+      
+    } else {
+      
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(yearly_survival$animal_life_stage_new))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+        }
+      }
+      
+      # Remove NAs 
+      n_original      <- nrow(yearly_survival)
+      yearly_survival <- yearly_survival[!is.na(yearly_survival$animal_life_stage_new),] 
+      
+      # Get unique life-stages after cleaning
+      unique_stages  <- sort(unique(yearly_survival$animal_life_stage_new))
+      n_life_stages  <- length(unique_stages)
+      
+      logger.info(sprintf("%d life-stages detected after cleaning: %s", n_life_stages, 
+                          paste(unique_stages, collapse = ", ")),
+                  call. = FALSE, immediate. = TRUE)
+      
+      n_lost <- n_original - nrow(yearly_survival)
+      if (n_lost > 0) {
+        logger.info(sprintf("%d individuals with NA life-stage removed from study.", n_lost),
+                    call. = FALSE, immediate. = TRUE)
+      }
+    }
+  }
   
+  if(group_comparsion_individual == "model"){
+    
+    if(is.null(survival_yr_start)){
+      
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(summary_table$model))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+        }
+      }
+      
+      # Clean data, remove NAs 
+      n_original <- nrow(summary_table)
+      summary_table <- summary_table %>%
+        filter(!is.na(model)) %>%
+        mutate(model = str_trim(model),
+               model = str_replace_all(model, "\\s+", ""),
+               model = str_extract(model, "^[^|]+"),
+               model = str_replace(model, "–", "-"))
+      
+      # Get unique conditions after cleaning
+      unique_conditions <- sort(unique(summary_table$model))
+      n_conditions <- length(unique_conditions)
+      
+      logger.info(sprintf("%d models detected after cleaning: %s", n_conditions,
+                          paste(unique_conditions, collapse = ", ")),
+                  call. = FALSE, immediate. = TRUE)
+      
+      n_lost <- n_original - nrow(summary_table)
+      if (n_lost > 0) {
+        logger.info(sprintf("%d individuals with NA model removed from study.", n_lost),
+                    call. = FALSE, immediate. = TRUE)
+      }
+      
+    } else {
+      
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(yearly_survival$model))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+        }
+      }
+      
+      # Clean data, remove NAs 
+      n_original      <- nrow(yearly_survival)
+      yearly_survival <- yearly_survival %>%
+        filter(!is.na(model)) %>%
+        mutate(model = str_trim(model),
+               model = str_replace_all(model, "\\s+", ""),
+               model = str_extract(model, "^[^|]+"),
+               model = str_replace(model, "–", "-"))
+      
+      # Get unique conditions after cleaning
+      unique_conditions <- sort(unique(yearly_survival$model))
+      n_conditions      <- length(unique_conditions)
+      
+      logger.info(sprintf("%d models detected after cleaning: %s", n_conditions, 
+                          paste(unique_conditions, collapse = ", ")),
+                  call. = FALSE, immediate. = TRUE)
+      
+      n_lost <- n_original - nrow(yearly_survival)
+      if (n_lost > 0) {
+        logger.info(sprintf("%d individuals with NA model removed from study.", n_lost),
+                    call. = FALSE, immediate. = TRUE)
+      }
+    } 
+  }
+  
+  if(group_comparsion_individual == "attachment"){
+    
+    if(is.null(survival_yr_start)){
+      
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(summary_table$attachment))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+        }
+      }
+      
+      # Clean data, remove NAs 
+      n_original    <- nrow(summary_table)
+      summary_table <- summary_table %>%
+        filter(!is.na(attachment)) %>%
+        mutate(attachment = str_trim(attachment),
+               attachment = str_replace_all(attachment, "\\s+", ""),
+               attachment = str_extract(attachment, "^[^|]+"),
+               attachment = str_replace(attachment, "–", "-"))
+      
+      # Get unique conditions after cleaning
+      unique_conditions <- sort(unique(summary_table$attachment))
+      n_conditions <- length(unique_conditions)
+      
+      logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions,
+                          paste(unique_conditions, collapse = ", ")),
+                  call. = FALSE, immediate. = TRUE)
+      
+      n_lost <- n_original - nrow(summary_table)
+      if (n_lost > 0) {
+        logger.info(sprintf("%d individuals with NA attachment types removed from study.", n_lost),
+                    call. = FALSE, immediate. = TRUE)
+      }
+      
+    } else {
+      
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(yearly_survival$attachment))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+        }
+      }
+      
+      # Clean data, remove NAs 
+      n_original      <- nrow(yearly_survival)
+      yearly_survival <- yearly_survival %>%
+        filter(!is.na(attachment)) %>%
+        mutate(attachment = str_trim(attachment),
+               attachment = str_replace_all(attachment, "\\s+", ""),
+               attachment = str_extract(attachment, "^[^|]+"),
+               attachment = str_replace(attachment, "–", "-"))
+      
+      # Get unique conditions after cleaning
+      unique_conditions <- sort(unique(yearly_survival$attachment))
+      n_conditions      <- length(unique_conditions)
+      
+      logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions, 
+                          paste(unique_conditions, collapse = ", ")),
+                  call. = FALSE, immediate. = TRUE)
+      
+      n_lost <- n_original - nrow(yearly_survival)
+      if (n_lost > 0) {
+        logger.info(sprintf("%d individuals with NA attachment type removed from study.", n_lost),
+                    call. = FALSE, immediate. = TRUE)
+      }
+    } 
+  }
+  
+  if(group_comparsion_individual == "survYear"){
+    
+    if(is.null(survival_yr_start)){ 
+      logger.error("This comparison only makes sense if survival years are defined.")
+      
+    } else {
+      
+      # Ensure different conditions are present
+      non_na_unique <- unique(na.omit(yearly_survival$survival_year))
+      if (length(non_na_unique) <= 1) {
+        if (length(non_na_unique) == 0) {
+          logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
+        } else {
+          logger.warn("Warning: There is only one non-NA grouping variable; no comparison is possible.")
+        }
+      }
+      
+      # Remove NAs 
+      n_original      <- nrow(yearly_survival)
+      yearly_survival <- yearly_survival[!is.na(yearly_survival$survival_year),] 
+      
+      # Get unique life-stages after cleaning
+      unique_surv_yrs  <- sort(unique(yearly_survival$survival_year))
+      n_surv_yrs       <- length(unique_surv_yrs)
+      
+      logger.info(sprintf("%d survival years detected after cleaning: %s", n_surv_yrs, 
+                          paste(unique_surv_yrs, collapse = ", ")),
+                  call. = FALSE, immediate. = TRUE)
+      
+      n_lost <- n_original - nrow(yearly_survival)
+      if (n_lost > 0) {
+        logger.info(sprintf("%d individuals with NA survival year removed from study.", n_lost),
+                    call. = FALSE, immediate. = TRUE)
+      }
+    }
+  }  
+  
+  
+  ## Basic summaries of data ------------------------------------------------
+    
   # Plot each individual's tracking history --- 
   
-  # Summarize per-deployment information
-  deployment_summary <- mt_track_data(data) |>
-    dplyr::select(deployment_id,
-                  individual_id,
-                  deploy_on  = deploy_on_timestamp,
-                  deploy_off = deploy_off_timestamp) |>
-    distinct() |>
-    mutate(deploy_on = as.POSIXct(deploy_on),
-           deploy_off     = as.POSIXct(deploy_off),
-           duration_days  = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
-    filter(deploy_off > deploy_on, !is.na(deploy_on), !is.na(deploy_off))
-  
-  has_time_filter <- !is.na(time_period_start) || !is.na(time_period_end)
-  
-  if (has_time_filter) {
-    t_start <- if (!is.na(time_period_start)) as.POSIXct(time_period_start) else min(deployment_summary$deploy_on, na.rm = TRUE)
-    t_end   <- if (!is.na(time_period_end))   as.POSIXct(time_period_end)   else max(deployment_summary$deploy_off, na.rm = TRUE)
+  if(is.null(survival_yr_start)){
+    
+    # Summarize per-deployment information
+    deployment_summary <- mt_track_data(data) |>
+      dplyr::select(deployment_id,
+                    individual_id,
+                    deploy_on  = deploy_on_timestamp,
+                    deploy_off = deploy_off_timestamp) |>
+      distinct() |>
+      mutate(deploy_on = as.POSIXct(deploy_on),
+             deploy_off     = as.POSIXct(deploy_off),
+             duration_days  = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
+      filter(deploy_off > deploy_on, !is.na(deploy_on), !is.na(deploy_off))
+    
+    has_time_filter <- !is.na(time_period_start) || !is.na(time_period_end)
+    
+    if (has_time_filter) {
+      t_start <- if (!is.na(time_period_start)) as.POSIXct(time_period_start) else min(deployment_summary$deploy_on, na.rm = TRUE)
+      t_end   <- if (!is.na(time_period_end))   as.POSIXct(time_period_end)   else max(deployment_summary$deploy_off, na.rm = TRUE)
+      
+      deployment_summary <- deployment_summary |>
+        mutate(clip_start = pmax(deploy_on,  t_start, na.rm = TRUE),
+               clip_end   = pmin(deploy_off, t_end,   na.rm = TRUE)) |>
+        filter(clip_start < clip_end) |>
+        mutate(plot_start = clip_start,
+               plot_end   = clip_end)
+    } else { 
+      deployment_summary <- deployment_summary |>
+        mutate(plot_start = deploy_on,
+               plot_end   = deploy_off)
+    }
+    
+    # Sort by start date 
+    first_start <- deployment_summary |>
+      group_by(individual_id) |>
+      summarise(first_start = min(plot_start, na.rm = TRUE), .groups = "drop")
     
     deployment_summary <- deployment_summary |>
-      mutate(clip_start = pmax(deploy_on,  t_start, na.rm = TRUE),
-             clip_end   = pmin(deploy_off, t_end,   na.rm = TRUE)) |>
-      filter(clip_start < clip_end) |>
-      mutate(plot_start = clip_start,
-             plot_end   = clip_end)
-  } else { 
-    deployment_summary <- deployment_summary |>
+      left_join(first_start, by = "individual_id") |>
+      mutate(individual_label = fct_reorder(as.character(individual_id), first_start)) |>
+      arrange(first_start, plot_start)
+    
+    # Total location count 
+    n_locs_total <- if (exists("n_locations", mode = "function")) {
+      n_locations(data)
+    } else {
+      nrow(data)
+    }
+    
+    # Plot
+    title_suffix <- if (has_time_filter) {
+      paste0(" (", format(t_start, "%b %Y"), " – ", format(t_end, "%b %Y"), ")")
+    } else {
+      ""
+    }
+    
+    tracking_history <- ggplot(deployment_summary) +
+        geom_segment(aes(x = plot_start, xend = plot_end,
+                         y = individual_label, yend = individual_label),
+                     linewidth = 3.2,
+                     color = "#FF7F0E") +
+        geom_point(aes(x = plot_start, y = individual_label),
+                   color = "#1F77B4", size = 3.5) +
+        geom_point(aes(x = plot_end, y = individual_label),
+                   color = "#9467BD", size = 3.5) +
+        geom_segment(data = deployment_summary |>
+                       group_by(individual_label) |>
+                       arrange(plot_start) |>
+                       mutate(
+                         prev_end  = lag(plot_end),
+                         gap_start = prev_end,
+                         gap_end   = plot_start,
+                         gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
+                       filter(gap_days > 30, !is.na(gap_days)),
+                     aes(x    = gap_start + (gap_end - gap_start)/2,
+                         xend = gap_start + (gap_end - gap_start)/2,
+                         y    = as.numeric(individual_label),
+                         yend = as.numeric(individual_label) + 0.45),
+                     color     = "grey50",
+                     linewidth = 1.2,
+                     arrow     = arrow(length = unit(0.18, "cm"), type = "closed")) +
+        labs(title    = paste0("Individual Collared Periods", title_suffix),
+             subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
+                                n_distinct(deployment_summary$individual_id),
+                                nrow(deployment_summary),
+                                n_locs_total),
+             x = "Time",
+             y = "Individual ID") +
+        theme_minimal(base_size = 12) +
+        theme(axis.text.y       = element_text(size = 8, face = "plain"),
+              panel.grid.major.y = element_blank(),
+              panel.grid.minor   = element_blank(),
+              plot.title        = element_text(face = "bold", size = 14),
+              plot.subtitle     = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
+              axis.text.x       = element_text(angle = 45, hjust = 1, vjust = 1),
+              axis.title        = element_text(size = 12)) +
+        scale_x_datetime(date_breaks  = "1 year",
+                         date_labels  = "%Y",
+                         expand       = expansion(mult = c(0.01, 0.03)),
+                         limits       = if (has_time_filter) c(t_start, t_end) else NULL)
+    
+    # ** want to figure out how to add width, height, units, dpi, bg to artifact **
+    artifact <- appArtifactPath("tracking_history.png")
+    logger.info(paste("Saving tracking history plot:", artifact))
+    png(artifact)
+    tracking_history
+    dev.off()
+    
+    # Calculate monthly mortality
+    if(calc_month_mort == TRUE){
+      mortality_data <- summary_table %>%
+        filter(mortality_event == 1) %>%
+        mutate(death_date  = as.Date(deploy_off_timestamp),
+               death_year  = year(death_date),
+               death_month = month(death_date, label = TRUE, abbr = TRUE),
+               death_month = factor(death_month, levels = month.abb, ordered = TRUE)) %>%
+        dplyr::select(death_year, death_month)
+      
+      monthly_morts <- mortality_data %>%
+        count(death_year, death_month, name = "n_mortalities") %>%
+        complete(death_year = seq(min(death_year, na.rm = TRUE),
+                                  max(death_year, na.rm = TRUE)),
+                 death_month = factor(month.abb, levels = month.abb, ordered = TRUE),
+                 fill = list(n_mortalities = 0)) %>%
+        mutate(death_month_num = as.integer(death_month),   
+               death_month     = fct_relevel(death_month, month.abb))
+      
+      # Plot
+      monthly_mort_plot <- ggplot(monthly_morts, aes(x = death_month, y = factor(death_year), 
+                                                     fill = n_mortalities)) +
+        geom_tile(color = "white", linewidth = 0.5) +
+        scale_fill_viridis_c(option    = "magma",
+                             direction = -1,
+                             begin     = 0.1,
+                             na.value  = "grey92",
+                             name      = "Number of\nmortality events") +
+        scale_x_discrete(position = "top") +
+        labs(title    = "Monthly Distribution of Confirmed Mortality Events",
+             subtitle = paste0("Total events: ", sum(monthly_morts$n_mortalities), 
+                               " • Time span: ", format(min(summary_table$deploy_on_timestamp), "%b %Y"), 
+                               " to ", format(max(summary_table$deploy_off_timestamp), "%b %Y")),
+             x        = NULL,
+             y        = "Year") +
+        theme_minimal(base_size = 14) +
+        theme(panel.grid       = element_blank(),
+              axis.ticks       = element_blank(),
+              legend.position  = "right",
+              legend.title     = element_text(size = 11),
+              legend.text      = element_text(size = 10),
+              plot.title       = element_text(face = "bold", hjust = 0.5, size = 16),
+              plot.subtitle    = element_text(hjust = 0.5, size = 12),
+              axis.text.x      = element_text(size = 11, face = "bold"),
+              axis.text.y      = element_text(size = 11))
+      
+      # want to figure out how to add width, height, units, dpi, bg to artifact 
+      artifact <- appArtifactPath("monthly_mortality.png")
+      logger.info(paste("Saving monthly mortality plot:", artifact))
+      png(artifact)
+      monthly_mort_plot
+      dev.off()
+      }
+    
+  } else {
+    
+    deployment_summary <- yearly_survival |>
+      distinct(individual_id,
+               individual_local_identifier,
+               deploy_on_timestamp,
+               deploy_off_timestamp) |>
+      mutate(deploy_on  = as.POSIXct(deploy_on_timestamp),
+             deploy_off = as.POSIXct(deploy_off_timestamp),
+             duration_days = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
+      filter(deploy_off > deploy_on,
+             !is.na(deploy_on),
+             !is.na(deploy_off)) |>
+      group_by(individual_id) |>
+      mutate(first_start = min(deploy_on, na.rm = TRUE),
+             individual_label = fct_reorder(paste(individual_id, individual_local_identifier, sep = " – "),
+                                            first_start)) |>
+      ungroup() |>
+      arrange(first_start, deploy_on) |>
       mutate(plot_start = deploy_on,
              plot_end   = deploy_off)
-  }
-  
-  # Sort by start date 
-  first_start <- deployment_summary |>
-    group_by(individual_id) |>
-    summarise(first_start = min(plot_start, na.rm = TRUE), .groups = "drop")
-  
-  deployment_summary <- deployment_summary |>
-    left_join(first_start, by = "individual_id") |>
-    mutate(individual_label = fct_reorder(as.character(individual_id), first_start)) |>
-    arrange(first_start, plot_start)
-  
-  # Total location count 
-  n_locs_total <- if (exists("n_locations", mode = "function")) {
-    n_locations(data)
-  } else {
-    nrow(data)
-  }
-  
-  # Plot
-  title_suffix <- if (has_time_filter) {
-    paste0(" (", format(t_start, "%b %Y"), " – ", format(t_end, "%b %Y"), ")")
-  } else {
-    ""
-  }
-  
-  tracking_history <- ggplot(deployment_summary) +
+    
+    # Total location count 
+    n_locs_total <- yearly_survival |>
+      distinct(individual_id, n_locations) |>
+      summarise(total = sum(n_locations, na.rm = TRUE)) |>
+      pull(total)
+    
+    # Plot 
+    tracking_history <- ggplot(deployment_summary) +
       geom_segment(aes(x = plot_start, xend = plot_end,
                        y = individual_label, yend = individual_label),
-                   linewidth = 3.2,
-                   color = "#FF7F0E") +
+                   linewidth = 3.2, color = "#FF7F0E") +
       geom_point(aes(x = plot_start, y = individual_label),
                  color = "#1F77B4", size = 3.5) +
       geom_point(aes(x = plot_end, y = individual_label),
@@ -1072,164 +1209,131 @@ rFunction = function(data, sdk,
       geom_segment(data = deployment_summary |>
                      group_by(individual_label) |>
                      arrange(plot_start) |>
-                     mutate(
-                       prev_end  = lag(plot_end),
-                       gap_start = prev_end,
-                       gap_end   = plot_start,
-                       gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
+                     mutate(prev_end  = lag(plot_end),
+                            gap_start = prev_end,
+                            gap_end   = plot_start,
+                            gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
                      filter(gap_days > 30, !is.na(gap_days)),
-                   aes(x    = gap_start + (gap_end - gap_start)/2,
+                   aes(x = gap_start + (gap_end - gap_start)/2,
                        xend = gap_start + (gap_end - gap_start)/2,
-                       y    = as.numeric(individual_label),
+                       y = as.numeric(individual_label),
                        yend = as.numeric(individual_label) + 0.45),
-                   color     = "grey50",
-                   linewidth = 1.2,
-                   arrow     = arrow(length = unit(0.18, "cm"), type = "closed")) +
-      labs(title    = paste0("Individual Collared Periods", title_suffix),
+                   color = "grey50", linewidth = 1.2,
+                   arrow = arrow(length = unit(0.18, "cm"), type = "closed")) +
+      labs(title    = paste0("Individual Collared Periods"),
            subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
                               n_distinct(deployment_summary$individual_id),
                               nrow(deployment_summary),
                               n_locs_total),
            x = "Time",
-           y = "Individual ID") +
+           y = "Individual") +
       theme_minimal(base_size = 12) +
-      theme(axis.text.y       = element_text(size = 8, face = "plain"),
+      theme(axis.text.y        = element_text(size = 8, face = "plain"),
             panel.grid.major.y = element_blank(),
             panel.grid.minor   = element_blank(),
-            plot.title        = element_text(face = "bold", size = 14),
-            plot.subtitle     = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
-            axis.text.x       = element_text(angle = 45, hjust = 1, vjust = 1),
-            axis.title        = element_text(size = 12)) +
-      scale_x_datetime(date_breaks  = "1 year",
-                       date_labels  = "%Y",
-                       expand       = expansion(mult = c(0.01, 0.03)),
-                       limits       = if (has_time_filter) c(t_start, t_end) else NULL)
-  
-  
-  # want to figure out how to add width, height, units, dpi, bg to artifact 
-  artifact <- appArtifactPath("tracking_history.png")
-  logger.info(paste("Saving tracking history plot:", artifact))
-  png(artifact)
-  tracking_history
-  dev.off()
-  
-  
-  ## Calculate monthly mortality:
-  if(calc_month_mort == "TRUE"){
-    mortality_data <- summary_table %>%
-      filter(mortality_event == 1) %>%
-      mutate(death_date  = as.Date(deploy_off_timestamp),
-             death_year  = year(death_date),
-             death_month = month(death_date, label = TRUE, abbr = TRUE),
-             death_month = factor(death_month, levels = month.abb, ordered = TRUE)) %>%
-      dplyr::select(death_year, death_month)
+            plot.title         = element_text(face = "bold", size = 14),
+            plot.subtitle      = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
+            axis.text.x        = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title         = element_text(size = 12)) +
+      scale_x_datetime(date_breaks = "1 year",
+                       date_labels = "%Y",
+                       expand      = expansion(mult = c(0.01, 0.03)))
     
-    monthly_morts <- mortality_data %>%
-      count(death_year, death_month, name = "n_mortalities") %>%
-      complete(death_year = seq(min(death_year, na.rm = TRUE),
-                                max(death_year, na.rm = TRUE)),
-               death_month = factor(month.abb, levels = month.abb, ordered = TRUE),
-               fill = list(n_mortalities = 0)) %>%
-      mutate(death_month_num = as.integer(death_month),   
-             death_month     = fct_relevel(death_month, month.abb))
-    
-    # Plot
-    monthly_mort <- ggplot(monthly_morts, aes(x = death_month, y = factor(death_year), fill = n_mortalities)) +
-      geom_tile(color = "white", linewidth = 0.5) +
-      scale_fill_viridis_c(option    = "magma",
-                           direction = -1,
-                           begin     = 0.1,
-                           na.value  = "grey92",
-                           name      = "Number of\nmortality events") +
-      scale_x_discrete(position = "top") +
-      labs(title    = "Monthly Distribution of Confirmed Mortality Events",
-           subtitle = paste0("Total events: ", sum(monthly_morts$n_mortalities), 
-                             " • Time span: ", format(min(summary_table$deploy_on_timestamp), "%b %Y"), 
-                             " to ", format(max(summary_table$deploy_off_timestamp), "%b %Y")),
-           x        = NULL,
-           y        = "Year") +
-      theme_minimal(base_size = 14) +
-      theme(panel.grid       = element_blank(),
-            axis.ticks       = element_blank(),
-            legend.position  = "right",
-            legend.title     = element_text(size = 11),
-            legend.text      = element_text(size = 10),
-            plot.title       = element_text(face = "bold", hjust = 0.5, size = 16),
-            plot.subtitle    = element_text(hjust = 0.5, size = 12),
-            axis.text.x      = element_text(size = 11, face = "bold"),
-            axis.text.y      = element_text(size = 11))
-    
-    # want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("monthly_mortality.png")
-    logger.info(paste("Saving monthly mortality plot:", artifact))
+    # ** want to figure out how to add width, height, units, dpi, bg to artifact **
+    artifact <- appArtifactPath("tracking_history.png")
+    logger.info(paste("Saving tracking history plot:", artifact))
     png(artifact)
-    monthly_mort
+    tracking_history
     dev.off()
+
+    # Calculate monthly mortality 
+    if(calc_month_mort == TRUE){
+      mortality_data <- yearly_survival |>
+        filter(mortality_event == 1 | died_this_year == TRUE) |>
+        mutate(mort_date   = as.Date(mortality_date),                     
+               deploy_off  = as.Date(deploy_off_timestamp),               
+               death_date  = coalesce(mort_date, deploy_off),
+               death_year  = year(death_date),
+               death_month = month(death_date, label = TRUE, abbr = TRUE),
+               death_month = factor(death_month, levels = month.abb, ordered = TRUE)) |>
+        dplyr::select(death_year, death_month)
+      
+      monthly_morts <- mortality_data |>
+        count(death_year, death_month, name = "n_mortalities") |>
+        complete(death_year  = seq(min(death_year, na.rm = TRUE), max(death_year, na.rm = TRUE)),
+                 death_month = factor(month.abb, levels = month.abb, ordered = TRUE),
+                 fill = list(n_mortalities = 0)) |>
+        mutate(death_month_num = as.integer(death_month),
+               death_month     = fct_relevel(death_month, month.abb))
+      
+      monthly_mort_plot <- ggplot(monthly_morts, 
+                                  aes(x = death_month, y = factor(death_year), fill = n_mortalities)) +
+        geom_tile(color = "white", linewidth = 0.5) +
+        scale_fill_viridis_c(option = "magma", direction = -1, begin = 0.1,
+                             na.value = "grey92", name = "Number of\nmortality events") +
+        scale_x_discrete(position = "top") +
+        labs(title    = "Monthly Distribution of Confirmed Mortality Events",
+             subtitle = paste0(
+               "Total events: ", sum(monthly_morts$n_mortalities, na.rm = TRUE),
+               " • Time span: ", format(min(yearly_survival$deploy_on_timestamp, na.rm = TRUE), "%b %Y"),
+               " to ", format(max(yearly_survival$deploy_off_timestamp, na.rm = TRUE), "%b %Y")),
+          x = NULL,
+          y = "Year") +
+        theme_minimal(base_size = 14) +
+        theme(panel.grid       = element_blank(),
+              axis.ticks       = element_blank(),
+              legend.position  = "right",
+              legend.title     = element_text(size = 11),
+              legend.text      = element_text(size = 10),
+              plot.title       = element_text(face = "bold", hjust = 0.5, size = 16),
+              plot.subtitle    = element_text(hjust = 0.5, size = 12),
+              axis.text.x      = element_text(size = 11, face = "bold"),
+              axis.text.y      = element_text(size = 11))
+      
+      # want to figure out how to add width, height, units, dpi, bg to artifact 
+      artifact <- appArtifactPath("monthly_mortality.png")
+      logger.info(paste("Saving monthly mortality plot:", artifact))
+      png(artifact)
+      monthly_mort_plot
+      dev.off()
+    }
   }
+    
   
-  
+
   ## Survival Analysis ----------------------------------------------------------
   
-  ## Fit Kaplan-Meier with staggered entry --- 
-  km_fit <- survfit(Surv(entry_time_days, exit_time_days, mortality_event) ~ 1, 
-                    data = summary_table)
+  ## No comparisons --- 
   
-  
-  ## Life table --- 
-  lt.length.out <- ceiling(max(summary_table$exit_time_days)/life_table_days)
-  times <- round(seq(min(summary_table$entry_time_days), max(summary_table$exit_time_days), 
-                     length.out = lt.length.out))
-  s <- summary(km_fit, times = times)
-  life_table <- data.frame(time_days        = s$time,
-                           n_risk           = s$n.risk,
-                           n_event          = s$n.event,
-                           survival_prob    = s$surv,
-                           std_err          = s$std.err,
-                           lower_95         = s$lower,
-                           upper_95         = s$upper)
-  
-  # unsure if the row.names will cause issues - double check 
-  write.csv(life_table, file = appArtifactPath("life_table.csv", row.names = F))
-  
-  
-  ## Plotting statistics --- 
-  n.ind <- nrow(summary_table)
-  n.events <- nrow(summary_table[summary_table$mortality_event == 1,])
-  n.days <- as.numeric(summary(km_fit)$table["median"])
-  
-  
-  ## KM Survival Curve ---
-  med <- survminer::surv_median(km_fit)
-  
-  if(add_risk_table == TRUE){
-    km_curve <- ggsurvplot(
-      km_fit,
-      data = summary_table,
-      title = "Kaplan-Meier Survival Curve",
-      subtitle = paste0("N = ", n.ind, ", Events = ", n.events, ", Median Survival = ", 
-                        med$median, " days"),
-      xlab = "Time (days)",
-      ylab = "Survival Probability",
-      risk.table = TRUE,
-      risk.table.col = "strata",
-      risk.table.title = "Number at Risk",
-      risk.table.y.text = FALSE,     
-      risk.table.height = 0.18,
-      conf.int = TRUE,
-      censor.shape = "|",
-      censor.size = 3,
-      legend = "none",
-      pval = TRUE,
-      surv.median.line = "hv",        
-      palette = c("#E69F00", "#56B4E9"),
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title         = element_text(face = "bold", size = 14), 
-              plot.subtitle      = element_text(size = 12, color = "gray50"),
-              axis.text          = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              plot.margin        = margin(10, 10, 10, 10)))
-  } else {
+  ## Kaplan-Meier with staggered entry 
+  if(is.null(survival_yr_start)){
+    
+    # Fit KM ---
+    km_fit <- survfit(Surv(entry_time_days, exit_time_days, mortality_event) ~ 1, 
+                      data = summary_table)
+    
+    # Generate life table ---
+    lt.length.out <- ceiling(max(summary_table$exit_time_days)/life_table_days)
+    times <- round(seq(min(summary_table$entry_time_days), max(summary_table$exit_time_days), 
+                       length.out = lt.length.out))
+    s <- summary(km_fit, times = times)
+    life_table <- data.frame(time_days        = s$time,
+                             n_risk           = s$n.risk,
+                             n_event          = s$n.event,
+                             survival_prob    = s$surv,
+                             std_err          = s$std.err,
+                             lower_95         = s$lower,
+                             upper_95         = s$upper)
+    
+    # **unsure if the row.names will cause issues - double check 
+    write.csv(life_table, file = appArtifactPath("life_table.csv", row.names = F))
+    
+    # Plot KM curve ---
+    n.ind <- nrow(summary_table)
+    n.events <- nrow(summary_table[summary_table$mortality_event == 1,])
+    n.days <- as.numeric(summary(km_fit)$table["median"])
+    med <- survminer::surv_median(km_fit)
+    
     km_curve <- ggsurvplot(
       km_fit,
       data = summary_table,
@@ -1253,41 +1357,15 @@ rFunction = function(data, sdk,
               panel.grid.major.y = element_line(color = "gray90"), 
               panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
               plot.margin        = margin(10, 10, 10, 10)))
-  }
-  
-  # want to figure out how to add width, height, units, dpi, bg to artifact 
-  artifact <- appArtifactPath("km_survival_curve.png")
-  logger.info(paste("Saving Kaplan-Meier survival curve plot:", artifact))
-  png(artifact)
-  km_curve
-  dev.off()
-  
-  
-  ## Cumulative hazard plot ----
-  if(add_risk_table == TRUE){
-    cum_hazard <- ggsurvplot(
-      km_fit,
-      fun = "cumhaz",
-      conf.int = TRUE,
-      risk.table = TRUE,
-      cumevents = TRUE,                 
-      tables.height = 0.18,              
-      tables.y.text = FALSE,            
-      surv.median.line = "hv",         
-      pval = TRUE,                     
-      xlab = "Time (days)",
-      ylab = "Cumulative Hazard",
-      title = "Cumulative Hazard",
-      subtitle = paste0("N = ", n.ind, ", Events = ", n.events), #update events 
-      palette = c("#E69F00", "#56B4E9"),
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title   = element_text(face = "bold", size = 14), 
-              plot.subtitle = element_text(size = 12, color = "gray50"),
-              axis.text    = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              plot.margin  = margin(10, 10, 10, 10)))
-  } else {
+    
+    # **want to figure out how to add width, height, units, dpi, bg to artifact 
+    artifact <- appArtifactPath("km_survival_curve.png")
+    logger.info(paste("Saving Kaplan-Meier survival curve plot:", artifact))
+    png(artifact)
+    km_curve
+    dev.off()
+    
+    # Plot cumulative hazard curve --- 
     cum_hazard <- ggsurvplot(
       km_fit,
       fun = "cumhaz",
@@ -1308,14 +1386,17 @@ rFunction = function(data, sdk,
               panel.grid.major.y = element_line(color = "gray90"), 
               panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
               plot.margin  = margin(10, 10, 10, 10)))
+    
+    # **want to figure out how to add width, height, units, dpi, bg to artifact 
+    artifact <- appArtifactPath("cumulative_hazard_plot.png")
+    logger.info(paste("Saving cumulative hazard plot:", artifact))
+    png(artifact)
+    cum_hazard
+    dev.off()
   }
   
-  # want to figure out how to add width, height, units, dpi, bg to artifact 
-  artifact <- appArtifactPath("cumulative_hazard_plot.png")
-  logger.info(paste("Saving cumulative hazard plot:", artifact))
-  png(artifact)
-  cum_hazard
-  dev.off()
+  FIGURE OUT FOR SURVIVAL PLOTS 
+  
   
   
   ## Group comparisons ---
