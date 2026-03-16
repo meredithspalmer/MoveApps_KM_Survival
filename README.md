@@ -6,11 +6,16 @@ https://github.com/meredithspalmer/MoveApps_Survival
 
 ## Description
 
-Perform basic Kaplan-Meier survival analyses and optional group comparisons via the log-rank test
+Perform basic Kaplan-Meier survival analyses and optional group comparisons via the log-rank test.
+These analyses can be peformed across an entire dataset, within defined time periods, or for survival years. 
 
 ## Documentation
 
-This app implements fundamental Kaplan-Meier (KM) survival estimation functions. It produces life tables, survival curves, cumulative hazard plots, and, if applicable, statistical comparisons of per-group survival estimation.
+This app implements fundamental Kaplan-Meier (KM) survival estimation functions. It produces life tables, survival curves, cumulative hazard plots, and, if applicable, statistical comparisons of per-group survival estimation for different attributes (sex, survival year, attachment type or model, etc.). 
+
+Data can be subset based on specific variables (e.g., only females) - this then allows the users to perform comparsions within this group (e.g., comparing survival of females with different collar types). Users can also enter additional information on survival years and animal life stages for comparison across these variables. 
+
+Users define a study period, can censor data to exclude post-capture mortality events, and specify how to handle missing time-stamp information. 
 
 **Kaplan-Meier Survival Estimation:** The KM estimator is a non-parametric method used to estimate the survival function, that is, the probability that an individual survives past time t, from lifetime data. This analysis allows for:
 - *Right-censoring*, where the exact time of death is unknown for some individuals because they are still alive at the end of the study period, lost to follow-up (e.g., collar failure), or exit the study period alive for other reasons. 
@@ -22,9 +27,11 @@ This app implements fundamental Kaplan-Meier (KM) survival estimation functions.
 
 **Log-rank Test:** Users can request log-rank tests (Mantel–Cox test) to compare survival distributions across groups. The log-rank test assesses whether there are statistically significant differences in survival between two or more independent groups. Currently supported grouping variables are: sex, life stage, reproductive condition, or tag/collar attachment type. 
 
-Users define a study period, can censor data to exclude post-capture mortality events, and specify how to handle missing timestamp information.
+**Survival year**: Users have the option define survival years. If this options are selected, output will be generated across the survival year (instead of across the study period). If a user wishes to compare survival across survival years, enter the survival year start and select 'survival year' as a grouping variable. To compare survival of different classes (e.g., ages, sexes) within a specific survival year, subset the data by a specific survival year and select the class of interest as the grouping variable. 
+- *Life stages*: If data is processed by survival year, users can then optionally define life stages that progress through time. Users can then subset data by a specific life stage or compare survival of different life stages within the same survival year. 
 
-**Survival year and life stages**: Users have the option define survival years; they can then optionally define life stages that progress through time. If these options are selected, output will be generated across the survival year (instead of across the study period). If a user wishes to compare survival across survival years, enter the survival year start and select 'survival year' as a grouping variable. To compare survival of different classes (e.g., ages, sexes) within a specific survival year, subset by a specific survival year and select the class of interest as the grouping variable. 
+**Mortality plots**: Users have the option to generate diagnostic plots showing monthly mortality across the study period. 
+
 
 Data pre-processing includes:  
 - Removing or updating empty or invalid data (according to user specification)
@@ -66,12 +73,11 @@ The app will produce a warning and terminate if none of the individuals in the s
 
 This app does *not* perform a power analysis prior to performing the survival analyzes. However, if fewer than 10 mortality events are detected, the app will generate a warning that the model may have low statistical power, potentially resulting in unreliable estimates and poor predictive power. 
 
-Note that a larger sample size is required for comparison across groups, 
+Note that a larger sample size is required for comparison across groups. 
 
-**Comparison types:** This app enables the user to select one of four grouping options to compare across. These currently include sex, lifestage, reproductive condition, and collar attachment type. These grouping classifications are cleaned and standardized for capitalization and white-space errors (e.g., "male" and "Male" will register as the same class) but note that other mispecifications (e.g., "male " vs. "M") will calculate as separate groups. 
+**Subetting data**: Users can select what subset of individuals to include in the study (only females, only individuals alive within a specific survival year, individuals wearing certain collar types, etc.).
 
-Note that user can start by subsetting the entire dataset by sex, such that these comparisons can be then run on only male, female, or unsexed ('u') individuals. 
-
+**Comparison types:** This app enables the user to select one of four grouping options to compare across. These currently include sex, lifestage, tag attachment type, and tag model. These grouping classifications are cleaned and standardized for capitalization and white-space errors (e.g., "male" and "Male" will register as the same class) but note that other mispecifications (e.g., "male " vs. "M") will calculate as separate groups. 
 
 ### Input type
 
@@ -86,6 +92,7 @@ Note that user can start by subsetting the entire dataset by sex, such that thes
 *Tracking history*: Figure (`tracking_history.png`) detailing the start and end dates of each individual during the tracking period (with gaps in collaring noted), along with an indicator of how each individual was terminated (i.e., death, censored, survived). 
 
 *Life table:* Output of KM survival analysis; table (`life_table.csv`) with the time, number of individuals at risk, number of events, survival, standard error, and upper/lower 95% confidence intervals. 
+*Mortality plot:* Optional diagnostic plot depicting mortality rate per month across the study period. 
 
 *KM survival curve:* Plot (`km_survival_curve.png`), depicting survival over time with median survival time indicated. User can select whether plot includes risk and cumulative events tables. 
 
@@ -109,7 +116,7 @@ Note that user can start by subsetting the entire dataset by sex, such that thes
 
 `Censor capture-related mortality`: If capture-related mortality is a concern, this setting allows users to define a number of days post-capture to exclude from the overall analysis. Default is no censoring. Unit: `days`. 
 
-`Subset data by sex`: If user wants to perform analyses on only one sex (i.e., such that comparisons across lifestages or other conditionals could be performed by sex), this setting allows users to subset data by sex of interest. Default setting is to include all data. 
+`Perform analysis on subset of data` and `Define subset condition`: If user wants to perform analyses on a subset of the data, user can define the grouping parameter they want to split the data on (subset condition; e.g., "sex") and the group of interest they wish to retain in the study (subset definition; e.g., "f"). Default setting is to include all data. 
 
 `Groups for comparison`: If interested in comparing across groups, this identifies the grouping variable. Default is no group comparisons. Options currently include: 
 - Sex
@@ -121,13 +128,11 @@ Note that user can start by subsetting the entire dataset by sex, such that thes
 
 `Survival year start date`: If comparing across survival years (see above), the user can define the day and month that each 'survival year' begins. The code assumes a year runs 365(6) days. Default is null. Unit: `date`. 
 
+`Animal birth/hatch year` and `Animal birth/hatch year definitions`: Optional auxiliary files a user can upload if they are running analyses by survival year and wish to classify individual life stage within a specific year. The first file indicates the birth/hatch year of each individual included in the study; the second file maps animal age to user-defined life stages. Templates for both files can be found on the Survival App GitHub. App expects files in `.csv` format. 
+
 `Life table length`: How often to generate statistical output in the life table (e.g., every # days). Default value is 30 days. Unit: `days`. 
 
 `Monthly mortality plots`: Create option plots showcasing monthly mortality across years. Default is no plot. Options are include/exclude. 
-
-`Risk and mortality tables`: Add risk and cumulative events (mortality) tables to the KM and cumulative hazard plots. Default is no plot. Options are include/exclude. 
-
-ADD AUXILIARY FILE INFO 
 
 
 ### Most common errors
