@@ -1508,166 +1508,22 @@ rFunction = function(data, sdk,
     # do nothing 
     
   } else if (group_comparison_individual == "survYear") {
-    logger.info("Grouping by: survival year")
-    
-    # Extract survival year start date 
-    start_month <- month(survival_yr_start)
-    start_day   <- mday(survival_yr_start)     
-    
-    # Function to handle invalid dates (like Feb 29 in non-leap years)
-    safe_make_date <- function(year, month, day) {
-      date <- suppressWarnings(make_date(year, month, day))
-      if (is.na(date)) {
-        ym <- ymd(sprintf("%d-%02d-01", year, month)) %m-% months(1)
-        date <- ceiling_date(ym, "month") - days(1)
-      }
-      date
-    }
-    
-    # Function to assign survival year and period boundaries 
-    get_survival_period <- function(date) {
-      if (is.na(date)) return(tibble(survival_year = NA_integer_, period_start = NA_Date_, period_end = NA_Date_))
-      y <- year(date)
-      period_start_this_year <- safe_make_date(y, start_month, start_day)
-      
-      if (date >= period_start_this_year) {
-        survival_year <- y
-        period_start  <- period_start_this_year
-        period_end    <- safe_make_date(y + 1, start_month, start_day) - days(1)
-      } else {
-        survival_year <- y - 1
-        period_start  <- safe_make_date(y - 1, start_month, start_day)
-        period_end    <- safe_make_date(y, start_month, start_day) - days(1)
-      }
-      
-      tibble(survival_year = survival_year,
-             period_start  = period_start,
-             period_end    = period_end)
-    }
-    
-    # Vectorized helpers
-    get_survival_year  <- function(date) get_survival_period(date)$survival_year
-    
-    # Determine range of survival years present in the data 
-    date_range <- events_with_ind %>%
-      summarise(min_ts = min(timestamp, na.rm = TRUE),
-                max_ts = max(timestamp, na.rm = TRUE))
-    min_year <- get_survival_year(date_range$min_ts)
-    max_year <- get_survival_year(date_range$max_ts)
-    possible_years <- seq(min_year, max_year, by = 1)
-    
-    # Create all possible survival periods
-    possible_periods <- tibble(survival_year = possible_years) %>%
-      mutate(period_info = map(survival_year, ~ {
-        start <- safe_make_date(.x, start_month, start_day)
-        end   <- safe_make_date(.x + 1, start_month, start_day) - days(1)
-        tibble(period_start = start, period_end = end)
-      })) %>%
-      unnest(period_info)
-    
-    # Create individual-year rows 
-    yearly_survival <- summary_table %>%
-      
-      # Keep only static/animal-level info for crossing
-      dplyr::select(individual_id,
-                    individual_local_identifier,
-                    any_of(c("sex",
-                             "animal_life_stage",
-                             "attachment_type",
-                             "animal_reproductive_condition"))) %>% 
-      distinct() %>% 
-      
-      # Cross with all possible survival years
-      crossing(possible_periods) %>%
-      
-      # Bring back deployment & mortality info
-      left_join(summary_table %>%
-                  dplyr::select(individual_id, 
-                                individual_local_identifier, 
-                                deploy_on_timestamp, 
-                                deploy_off_timestamp, 
-                                any_of(c("mortality_date", 
-                                         "mortality_type", 
-                                         "death_comments", 
-                                         "deployment_end_comments", 
-                                         "deployment_end_type", 
-                                         "mortality_event", 
-                                         "first_timestamp", "last_timestamp", 
-                                         "n_locations", "n_deployments"))), 
-                by = c("individual_id", "individual_local_identifier")) %>%
-      
-      # Clip monitoring interval to this survival period
-      mutate(monitor_start = pmax(deploy_on_timestamp,  period_start, na.rm = TRUE),
-             monitor_end   = pmin(deploy_off_timestamp, period_end,   na.rm = TRUE),
-             
-             # Keep only periods where animal was monitored
-             active_in_period = monitor_start <= monitor_end & !is.na(monitor_start) & !is.na(monitor_end)) %>%
-      filter(active_in_period) %>%
-      
-      # Final entry / exit dates for this animal-year
-      mutate(entry_date = monitor_start,
-             exit_date  = monitor_end,
-             
-             # Did mortality occur **inside** this survival year?
-             died_this_year = case_when(
-               
-               # Priority 1: mortality_date exists and is inside the period
-               mortality_event == 1L &
-                 !is.na(mortality_date) &
-                 mortality_date >= period_start &
-                 mortality_date <= period_end
-               ~ TRUE,
-               
-               # Priority 2: mortality_date is NA, but mortality_event == 1 AND deploy_off inside period
-               mortality_event == 1L &
-                 is.na(mortality_date) &
-                 !is.na(deploy_off_timestamp) &
-                 deploy_off_timestamp >= period_start &
-                 deploy_off_timestamp <= period_end
-               ~ TRUE,
-               
-               # Otherwise: no death this year
-               TRUE ~ FALSE
-             ),
-             
-             # Final flags
-             mortality_event = as.integer(died_this_year),
-             censored        = as.integer(!died_this_year),
-             
-             # Reported mortality date: prefer original mortality_date, fall back to deploy_off
-             mortality_date_reported = case_when(
-               died_this_year & !is.na(mortality_date) ~ as.Date(mortality_date),
-               died_this_year &  is.na(mortality_date) ~ as.Date(deploy_off_timestamp),
-               TRUE                                    ~ NA_Date_),
-             
-             # Carry mortality metadata only when we flag a death
-             mortality_type          = if_else(died_this_year, mortality_type,          NA_character_),
-             death_comments          = if_else(died_this_year, death_comments,          NA_character_),
-             deployment_end_comments = if_else(died_this_year, deployment_end_comments, NA_character_),
-             deployment_end_type     = if_else(died_this_year, deployment_end_type,     NA_character_),
-             
-             # Days monitored in this survival year
-             days_at_risk = as.integer(exit_date - entry_date) + 1L) %>%
-      
-      # Final cleaning
-      arrange(individual_id, survival_year)
-    
-    
+  
     # Fit survival object ---
     surv_formula <- Surv(days_at_risk, mortality_event) ~ survival_year
     km_fit_comp <- survfit(surv_formula, data = yearly_survival)
     
-    ## Log-Rank test --- 
+    # Log-Rank test --- 
     test <- survdiff(surv_formula, data=yearly_survival)
     
     # Extract components
-    groups <- names(test$n)
-    n_total <- sum(test$n)
+    groups       <- names(test$n)
+    n_total      <- sum(test$n)
     events_total <- sum(test$obs)
-    chisq_val <- round(test$chisq, 2)
-    df_val <- length(test$n) - 1
-    p_val <- 1 - pchisq(test$chisq, df_val)
-    p_formatted <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
+    chisq_val    <- round(test$chisq, 2)
+    df_val       <- length(test$n) - 1
+    p_val        <- 1 - pchisq(test$chisq, df_val)
+    p_formatted  <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
     
     # Summary table 
     per_group <- tibble(`Reproductive condition` = sub(".*=", "", groups),    
@@ -1689,12 +1545,12 @@ rFunction = function(data, sdk,
       select(`Reproductive condition`, `N (events)`, `Expected events`, `O/E ratio`,
              `Chisq (log-rank)`, df, `p-value`)
     
-    # double check that adding row.names = F doesn't cause issues 
+    # **double check that adding row.names = F doesn't cause issues 
     write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv", row.names = F))
     
     
-    ## KM comparison plots ---
-    km_fit_comp <- surv_fit(surv_formula, data = yearly_survival)  # use surv_fit instead of survfit
+    # KM comparison plots ---
+    km_fit_comp <- surv_fit(surv_formula, data = yearly_survival)  
     
     title_text <- paste0("Kaplan-Meier Survival Curve: Survival year")
     subtitle_text <- paste0("N: ", n_total, "(", events_total, "); Chisq: ", round(test$chisq, 3), "; P-value: ", round(test$pvalue, 3))
@@ -1706,68 +1562,37 @@ rFunction = function(data, sdk,
     yearly_survival$survival_year <- as.factor(yearly_survival$survival_year)
     n_groups <- nlevels(as.factor(yearly_survival$survival_year))
     my_palette <- viridis(n_groups, option = "turbo")
-    risk_table_height <- n_groups * 0.09 #THIS NEEDS TO BE DEBUGGED 
     
     # Plot 
-    if(add_risk_table == TRUE){
-      km_comp_curve <- ggsurvplot(km_fit_comp,
-                                  data = yearly_survival,
-                                  title = title_text,
-                                  subtitle = subtitle_text,
-                                  conf.int = TRUE,
-                                  risk.table = TRUE,
-                                  risk.table.title = "Number at risk",
-                                  risk.table.height = risk_table_height,
-                                  surv.median.line = "hv",
-                                  palette = my_palette, 
-                                  xlab = "Days at risk",
-                                  ylab = "Survival probability",
-                                  legend.title = "Survival year",
-                                  legend = "bottom",
-                                  legend.labs = levels(yearly_survival$survival_year),
-                                  censor.shape = "|",
-                                  censor.size = 4,
-                                  font.main = c(14, "bold", "black"),
-                                  font.x = 12, font.y = 12, font.tickslab = 11, 
-                                  ggtheme = theme_classic(base_size = 12) +
-                                    theme(
-                                      plot.title   = element_text(face = "bold", size = 14),
-                                      plot.subtitle = element_text(size = 12, color = "gray50"),
-                                      axis.text    = element_text(color = "black"),
-                                      panel.grid.major.y = element_line(color = "gray90"),
-                                      panel.border = element_rect(color="black", fill = NA, linewidth = 0.5),
-                                      plot.margin  = margin(10, 10, 10, 10)))
-    } else {
-      km_comp_curve <- ggsurvplot(km_fit_comp,
-                                  data = yearly_survival,
-                                  title = title_text,
-                                  subtitle = subtitle_text,
-                                  conf.int = TRUE,
-                                  risk.table = FALSE,
-                                  surv.median.line = "hv",
-                                  palette = my_palette, 
-                                  xlab = "Days at risk",
-                                  ylab = "Survival probability",
-                                  legend.title = "Survival year",
-                                  legend = "bottom",
-                                  legend.labs = levels(yearly_survival$survival_year),
-                                  censor.shape = "|",
-                                  censor.size = 4,
-                                  font.main = c(14, "bold", "black"),
-                                  font.x = 12, font.y = 12, font.tickslab = 11, 
-                                  ggtheme = theme_classic(base_size = 12) +
-                                    theme(
-                                      plot.title   = element_text(face = "bold", size = 14),
-                                      plot.subtitle = element_text(size = 12, color = "gray50"),
-                                      axis.text    = element_text(color = "black"),
-                                      panel.grid.major.y = element_line(color = "gray90"),
-                                      panel.border = element_rect(color="black", fill = NA, linewidth = 0.5),
-                                      plot.margin  = margin(10, 10, 10, 10)))
-    }
+    km_comp_curve <- ggsurvplot(km_fit_comp,
+                                data = yearly_survival,
+                                title = title_text,
+                                subtitle = subtitle_text,
+                                conf.int = TRUE,
+                                risk.table = FALSE,
+                                surv.median.line = "hv",
+                                palette = my_palette, 
+                                xlab = "Days at risk",
+                                ylab = "Survival probability",
+                                legend.title = "Survival year",
+                                legend = "bottom",
+                                legend.labs = levels(yearly_survival$survival_year),
+                                censor.shape = "|",
+                                censor.size = 4,
+                                font.main = c(14, "bold", "black"),
+                                font.x = 12, font.y = 12, font.tickslab = 11, 
+                                ggtheme = theme_classic(base_size = 12) +
+                                  theme(
+                                    plot.title   = element_text(face = "bold", size = 14),
+                                    plot.subtitle = element_text(size = 12, color = "gray50"),
+                                    axis.text    = element_text(color = "black"),
+                                    panel.grid.major.y = element_line(color = "gray90"),
+                                    panel.border = element_rect(color="black", fill=NA, linewidth = 0.5),
+                                    plot.margin  = margin(10, 10, 10, 10)))
     
     # want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("km_comparison_curves.png")
-    logger.info(paste("Saving KM comparison curves:", artifact))
+    artifact <- appArtifactPath("km_comparison_curves_survivalyear.png")
+    logger.info(paste("Saving KM comparison curves (survival year):", artifact))
     png(artifact)
     km_comp_curve
     dev.off()
@@ -1781,87 +1606,53 @@ rFunction = function(data, sdk,
     cumhaz_subtitle <- sprintf("Log-rank p = %.3f", test$pval)
     
     # Plot 
-    if(add_risk_table == TRUE){
-      cum_hazard_comp <- ggsurvplot(km_fit_comp,
-                                    data = yearly_survival,
-                                    fun          = "cumhaz",
-                                    conf.int     = TRUE,
-                                    censor.shape = "|",
-                                    censor.size  = 4,
-                                    title        = paste0("Cumulative Hazard by Survival Year"),
-                                    subtitle     = cumhaz_subtitle,   
-                                    xlab         = "Days at risk",
-                                    ylab         = "Cumulative Hazard",
-                                    legend       = "bottom",
-                                    legend.title = "Survival year",
-                                    legend.labs  = levels(yearly_survival$survival_year),
-                                    palette      = my_palette,
-                                    risk.table   = TRUE,
-                                    cumevents    = TRUE,
-                                    tables.height = risk_table_height,
-                                    tables.y.text = FALSE,
-                                    font.main    = c(14, "bold", "black"),
-                                    font.x       = 12, font.y = 12, font.tickslab = 11,
-                                    ggtheme = theme_classic(base_size = 12) +
-                                      theme(plot.title    = element_text(face = "bold", size = 14),
-                                            plot.subtitle = element_text(size = 12, color = "gray50"),
-                                            axis.text     = element_text(color = "black"),
-                                            panel.grid.major.y = element_line(color = "gray90"),
-                                            panel.border  = element_rect(color = "black", fill=NA, linewidth=0.5),
-                                            plot.margin   = margin(10, 10, 10, 10),
-                                            legend.position = "bottom",
-                                            legend.title  = element_text(size = 11),
-                                            legend.text   = element_text(size = 10)))
-    } else {
-      cum_hazard_comp <- ggsurvplot(km_fit_comp,
-                                    data = yearly_survival,
-                                    fun          = "cumhaz",
-                                    conf.int     = TRUE,
-                                    censor.shape = "|",
-                                    censor.size  = 4,
-                                    title        = paste0("Cumulative Hazard by Survival Year"),
-                                    subtitle     = cumhaz_subtitle,   
-                                    xlab         = "Days at risk",
-                                    ylab         = "Cumulative Hazard",
-                                    legend       = "bottom",
-                                    legend.title = "Survival year",
-                                    legend.labs  = levels(yearly_survival$survival_year),
-                                    palette      = my_palette,
-                                    risk.table   = FALSE,
-                                    cumevents    = FALSE,
-                                    font.main    = c(14, "bold", "black"),
-                                    font.x       = 12, font.y = 12, font.tickslab = 11,
-                                    ggtheme = theme_classic(base_size = 12) +
-                                      theme(plot.title    = element_text(face = "bold", size = 14),
-                                            plot.subtitle = element_text(size = 12, color = "gray50"),
-                                            axis.text     = element_text(color = "black"),
-                                            panel.grid.major.y = element_line(color = "gray90"),
-                                            panel.border  = element_rect(color = "black", fill=NA, linewidth=0.5),
-                                            plot.margin   = margin(10, 10, 10, 10),
-                                            legend.position = "bottom",
-                                            legend.title  = element_text(size = 11),
-                                            legend.text   = element_text(size = 10)))
-    }
+    cum_hazard_comp <- ggsurvplot(km_fit_comp,
+                                  data = yearly_survival,
+                                  fun          = "cumhaz",
+                                  conf.int     = TRUE,
+                                  censor.shape = "|",
+                                  censor.size  = 4,
+                                  title        = paste0("Cumulative Hazard by Survival Year"),
+                                  subtitle     = cumhaz_subtitle,   
+                                  xlab         = "Days at risk",
+                                  ylab         = "Cumulative Hazard",
+                                  legend       = "bottom",
+                                  legend.title = "Survival year",
+                                  legend.labs  = levels(yearly_survival$survival_year),
+                                  palette      = my_palette,
+                                  risk.table   = FALSE,
+                                  cumevents    = FALSE,
+                                  font.main    = c(14, "bold", "black"),
+                                  font.x       = 12, font.y = 12, font.tickslab = 11,
+                                  ggtheme = theme_classic(base_size = 12) +
+                                    theme(plot.title    = element_text(face = "bold", size = 14),
+                                          plot.subtitle = element_text(size = 12, color = "gray50"),
+                                          axis.text     = element_text(color = "black"),
+                                          panel.grid.major.y = element_line(color = "gray90"),
+                                          panel.border  = element_rect(color = "black", fill=NA, linewidth=0.5),
+                                          plot.margin   = margin(10, 10, 10, 10),
+                                          legend.position = "bottom",
+                                          legend.title  = element_text(size = 11),
+                                          legend.text   = element_text(size = 10)))
   }
   
   # want to figure out how to add width, height, units, dpi, bg to artifact 
-  artifact <- appArtifactPath("cum_hazard_comparison_plot.png")
-  logger.info(paste("Saving cumulative hazard comparison plots:", artifact))
+  artifact <- appArtifactPath("cum_hazard_comparison_plot_survivalyear.png")
+  logger.info(paste("Saving cumulative hazard comparison plots (survival year):", artifact))
   png(artifact)
   cum_hazard_comp
   dev.off()
     
-    
   } else {
     logger.info("Grouping by: ", group_comparison_individual)
     
-    # Fit survival object 
+    # Fit survival object ---
     summary_table$time_at_risk <- summary_table$exit_time_days - summary_table$entry_time_days
     formula_str <- paste("Surv(time_at_risk, mortality_event) ~", group_comparison_individual)
     surv_formula <- as.formula(formula_str)
     km_fit_comp <- survfit(surv_formula, data = summary_table)
     
-    ## Log-Rank test --- 
+    # Log-Rank test --- 
     test <- survdiff(surv_formula, data=summary_table)
     
     # Extract components
@@ -1896,15 +1687,14 @@ rFunction = function(data, sdk,
     # double check that adding row.names = F doesn't cause issues 
     write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv", row.names = F))
     
-    
-    ## KM comparison plots ---
+    # KM comparison plots ---
     km_fit_comp <- surv_fit(surv_formula, data = summary_table)  # use surv_fit instead of survfit
     
     # Dynamically update comparison variables 
     grouping_labels <- c("animal_reproductive_condition" = "Reproductive Condition",
                          "sex"                           = "Sex",
-                         "attachment"                    = "Collar Attachment",
-                         "lifestage"                     = "Life-stage")
+                         "attachment"                    = "Collar Attachment")#,
+                         #"lifestage"                     = "Life-stage")
     grouping_var <- grouping_labels[[group_comparison_individual]]
     if (is.na(grouping_var)) {
       logger.error("Unknown grouping variable: ", group_comparison_individual)

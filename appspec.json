@@ -56,14 +56,14 @@
     {
       "id": "censor_capture_mortality",
       "name": "Censor capture-related mortality",
-      "description": "If necessary, input number of days to exclude from analysis post-capture.",
+      "description": "If necessary, input number of days post-capture to exclude from analysis.",
       "defaultValue": 0,
       "type": "INTEGER"
     }, 
     {
       "id": "subset_condition",
-      "name": "Subset data by sex",
-      "description": "If interested in performing analyses on only one sex, select below.",
+      "name": "Perform analysis on subset of data",
+      "description": "If interested in performing analyses on a subset of the data, select the variable to subset by below. You will define the group of interest within this subset in the next step. Note: if using a survival year or life stage filter, be sure to enter survival year start dates in the following filters. For life stage, you will additionally need to add auxiliary life stage information (template csv files can be found on this app's GitHub page).",
       "defaultValue": null,
       "type": "DROPDOWN",
       "options": [
@@ -72,23 +72,38 @@
           "displayText": "All data included"
         },
         {
-          "value": "m",
-          "displayText": "Male individuals only"
+          "value": "sex",
+          "displayText": "Subset by sex (m/f/u)"
         }, 
-         {
-          "value": "f",
-          "displayText": "Female individuals only"
+        {
+          "value": "lifestage",
+          "displayText": "Subset by lifestage (user-defined)"
         }, 
-         {
-          "value": "u",
-          "displayText": "Other individuals only"
+        {
+          "value": "survival_year",
+          "displayText": "Subset by survival year (user-defined)"
+        },
+        {
+          "value": "attachment_type",
+          "displayText": "Subset by attachment type"
+        },
+        {
+          "value": "model",
+          "displayText": "Subset by tag model"
         }
       ]
     }, 
     {
+      "id": "subset_condition_define",
+      "name": "Define your subsetting condition",
+      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals).",
+      "defaultValue": null,
+      "type": "STRING"
+    },
+    {
       "id": "group_comparison_individual",
       "name": "Groups for comparison",
-      "description": "If interested in comparing across groups, identify the grouping variable.",
+      "description": "If interested in comparing across groups, identify the grouping variable. Note that `survival year` and `life stage` require entry of additional and/or auxiliary data.",
       "defaultValue": null,
       "type": "DROPDOWN",
       "options": [
@@ -105,10 +120,6 @@
           "displayText": "Life stage"
         },
         {
-          "value": "reproCond",
-          "displayText": "Reproductive condition"
-        },
-        {
           "value": "attachment",
           "displayText": "Attachment type"
         }, 
@@ -123,11 +134,23 @@
       ]
     }, 
     {
-        "id": "survival_yr_start",
-        "name": "Survival year start",
-        "description": "If comparing across survival years, select the start date of your survival year. Note that what is important is the day and month; year is irrelevant.",
-        "defaultValue": null,
-        "type": "INSTANT"
+      "id": "survival_yr_start",
+      "name": "Survival year start",
+      "description": "If comparing across survival years, select the start date of your survival year. Note that what is important is the day and month; year is irrelevant.",
+      "defaultValue": null,
+      "type": "INSTANT"
+    },
+    {
+    "id": "animal_birth_hatch_year",
+    "name": "Animal birth/hatch year",
+    "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information for each individual: individual_id, individual_local_identifier, animal_birth_hatch_year (see template on GitHub). The app expects a file with the extension `.csv`.",
+    "type": "USER_FILE"
+    },
+    {
+    "id": "animal_birth_hatch_year_table",
+    "name": "Animal birth/hatch year definitions",
+    "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information: animal_life_stage, year_at_start (that is, a file that maps age to lifestage; see template on GitHub). The app expects a file with the extension: `.csv`.",
+    "type": "USER_FILE"
     },
     {
       "id": "life_table_days",
@@ -140,43 +163,19 @@
       "id": "calc_month_mort",
       "name": "Plot monthly mortality",
       "description": "Select an option.",
-      "defaultValue": FALSE,
+      "defaultValue": false,
       "type": "RADIOBUTTONS",
-      "options": [{
-        "value": FALSE,
+      "options": [
+        {
+        "value": false,
         "displayText": "Do not plot monthly mortality"
         },
         {
-          "value": TRUE,
-          "displayText": "Plot monthly mortality"}]
-          },
-    {
-      "id": "add_risk_table",
-      "name": "Add risk and cumulative events tables to KM and hazard plots",
-      "description": "Select an option.",
-      "defaultValue": FALSE,
-      "type": "RADIOBUTTONS",
-      "options": [{
-          "value": FALSE,
-          "displayText": "Do not add risk/events tables."
-          },
-        {
-          "value": TRUE,
-          "displayText": "Add risk/events tables."
-        }]
-    },  
-    {
-    "id": "animal_birth_hatch_year",
-    "name": "Animal birth/hatch year",
-    "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information for each individual: individual_id, individual_local_identifier, animal_birth_hatch_year (see template on GitHub). The app expects a file with the extension `.csv`.",
-    "type": "USER_FILE"
-    },
-    {
-    "id": "animal_birth_hatch_year_table",
-    "name": "Animal birth/hatch year definitions",
-    "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information: animal_life_stage, year_at_start (that is, what is the first year associated with this life stage; see template on GitHub). The app expects a file with the extension: `.csv`.",
-    "type": "USER_FILE"
-    }
+          "value": true,
+          "displayText": "Plot monthly mortality"
+        }
+        ]
+      }
   ],
   "dependencies": {
     "R": [
@@ -190,7 +189,8 @@
       {"name": "sf"},
       {"name": "forecats"}, 
       {"name": "tidyr"}, 
-      {"name": "purrr"}
+      {"name": "purrr"}, 
+      {"name": "viridis"}
     ]
   },
   "license": {
@@ -202,7 +202,6 @@
     "mortality"
   ],
   "people": [
-    "people": [
     {
       "firstName": "Meredith",
       "middleInitials": "S.",
