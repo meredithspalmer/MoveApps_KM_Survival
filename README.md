@@ -7,6 +7,7 @@ https://github.com/meredithspalmer/MoveApps_Survival
 ## Description
 
 Perform basic Kaplan-Meier survival analyses and optional group comparisons via the log-rank test.
+
 These analyses can be peformed across an entire dataset, within defined time periods, or for survival years. 
 
 ## Documentation
@@ -27,7 +28,7 @@ Users define a study period, can censor data to exclude post-capture mortality e
 
 **Log-rank Test:** Users can request log-rank tests (Mantel–Cox test) to compare survival distributions across groups. The log-rank test assesses whether there are statistically significant differences in survival between two or more independent groups. Currently supported grouping variables are: sex, life stage, reproductive condition, or tag/collar attachment type. 
 
-**Survival year**: Users have the option define survival years. If this options are selected, output will be generated across the survival year (instead of across the study period). If a user wishes to compare survival across survival years, enter the survival year start and select 'survival year' as a grouping variable. To compare survival of different classes (e.g., ages, sexes) within a specific survival year, subset the data by a specific survival year and select the class of interest as the grouping variable. 
+**Survival year**: Users have the option define survival years. If a user wishes to compare survival across survival years, enter the survival year start and select 'survival year' as a grouping variable. To compare survival of different classes (e.g., ages, sexes) within a specific survival year, subset the data by a specific survival year and select the class of interest as the grouping variable. 
 - *Life stages*: If data is processed by survival year, users can then optionally define life stages that progress through time. Users can then subset data by a specific life stage or compare survival of different life stages within the same survival year. 
 
 **Mortality plots**: Users have the option to generate diagnostic plots showing monthly mortality across the study period. 
@@ -42,9 +43,10 @@ Data pre-processing includes:
 The app then summarizes the data into a per-individual table and figure containing:  
 - Duration within the study period (accounting for staggered entry and censoring)  
 - Survival event indicator (1 = death occurred during study period, 0 = censored or survived)  
+- Gaps in tracking are also indicated (i.e., if an individual was collared and then recollared at a later date)
 
 Finally, the app performs Kaplan-Meier survival estimation on the cleaned dataset, generating: 
-- Summary statistics 
+- Life table (summary statistics) 
 - A KM survival curve (estimated survival probability over time, with 95% confidence intervals)
 - A cumulative hazard plot (total accumulated risk over time, with 95% confidence intervals)
 
@@ -58,7 +60,7 @@ When group comparison is enabled, the app additionally produces:
 
 #### Generality of App usability
 
-This app has currently been tested on mammals and birds with N_individuals > 100, N_deaths > 50, and study duration >1 year, but should be applicable to any dataset containing mortality data of sufficient sample size (see below). 
+This app has currently been tested on mammals and birds with N_individuals > 50, N_deaths > 5, and study duration >1 year, but should be applicable to any dataset containing mortality data of sufficient sample size (see below). 
 
 This app allows for staggered entry during the defined study period and for censored data (individuals that are "lost" from the study, e.g., due to equipment failure and individuals that survive the study period). 
 
@@ -91,7 +93,8 @@ Note that a larger sample size is required for comparison across groups.
 
 *Tracking history*: Figure (`tracking_history.png`) detailing the start and end dates of each individual during the tracking period (with gaps in collaring noted), along with an indicator of how each individual was terminated (i.e., death, censored, survived). 
 
-*Life table:* Output of KM survival analysis; table (`life_table.csv`) with the time, number of individuals at risk, number of events, survival, standard error, and upper/lower 95% confidence intervals. 
+*Life table:* Output of KM survival analysis; table (`life_table.csv`) with the time, number of individuals at risk, number of events, survival, standard error, and upper/lower 95% confidence intervals.
+
 *Mortality plot:* Optional diagnostic plot depicting mortality rate per month across the study period. 
 
 *KM survival curve:* Plot (`km_survival_curve.png`), depicting survival over time with median survival time indicated. User can select whether plot includes risk and cumulative events tables. 
@@ -120,8 +123,7 @@ Note that a larger sample size is required for comparison across groups.
 
 `Groups for comparison`: If interested in comparing across groups, this identifies the grouping variable. Default is no group comparisons. Options currently include: 
 - Sex
-- Lifestage 
-- Reproductive condition
+- Life stage 
 - Attachment type 
 - Model of tag 
 - Survival year (dates defined by user)

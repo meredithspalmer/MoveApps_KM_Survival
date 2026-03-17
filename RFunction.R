@@ -161,8 +161,9 @@ rFunction = function(data, sdk,
       animal_life_stage = if ("animal_life_stage" %in% names(events_with_ind))
         str_c(unique(animal_life_stage[!is.na(animal_life_stage)]), collapse = " | ") else NA_character_,
       
-      animal_reproductive_condition = if ("animal_reproductive_condition" %in% names(events_with_ind))
-        str_c(unique(animal_reproductive_condition[!is.na(animal_reproductive_condition)]), collapse = " | ") else NA_character_,
+      model = if ("model" %in% names(events_with_ind)) {
+        str_c(unique(model[!is.na(model)]), collapse = " | ")
+      } else NA_character_,
       
       attachment_type = if ("attachment_type" %in% names(events_with_ind))
         str_c(unique(attachment_type[!is.na(attachment_type)]), collapse = " | ") else NA_character_,
@@ -533,7 +534,7 @@ rFunction = function(data, sdk,
                     any_of(c("sex",
                              "animal_life_stage",
                              "attachment_type",
-                             "animal_reproductive_condition"))) %>% 
+                             "model"))) %>% 
       distinct() %>% 
       
       # Cross with all possible survival years
@@ -1067,7 +1068,7 @@ rFunction = function(data, sdk,
         geom_segment(aes(x = plot_start, xend = plot_end,
                          y = individual_label, yend = individual_label),
                      linewidth = 3.2,
-                     color = "#FF7F0E") +
+                     color = "grey") +
         geom_point(aes(x = plot_start, y = individual_label),
                    color = "#1F77B4", size = 3.5) +
         geom_point(aes(x = plot_end, y = individual_label),
@@ -1136,13 +1137,13 @@ rFunction = function(data, sdk,
       
       # Plot
       monthly_mort_plot <- ggplot(monthly_morts, aes(x = death_month, y = factor(death_year), 
-                                                     fill = n_mortalities)) +
+                                                     fill = factor(n_mortalities))) +
         geom_tile(color = "white", linewidth = 0.5) +
-        scale_fill_viridis_c(option    = "magma",
+        scale_fill_viridis_d(option    = "magma",
                              direction = -1,
-                             begin     = 0.1,
                              na.value  = "grey92",
-                             name      = "Number of\nmortality events") +
+                             name      = "Number of\nmortality events", 
+                             drop      = FALSE) +
         scale_x_discrete(position = "top") +
         labs(title    = "Monthly Distribution of Confirmed Mortality Events",
              subtitle = paste0("Total events: ", sum(monthly_morts$n_mortalities), 
@@ -1201,7 +1202,7 @@ rFunction = function(data, sdk,
     tracking_history <- ggplot(deployment_summary) +
       geom_segment(aes(x = plot_start, xend = plot_end,
                        y = individual_label, yend = individual_label),
-                   linewidth = 3.2, color = "#FF7F0E") +
+                   linewidth = 3.2, color = "grey") +
       geom_point(aes(x = plot_start, y = individual_label),
                  color = "#1F77B4", size = 3.5) +
       geom_point(aes(x = plot_end, y = individual_label),
@@ -1266,11 +1267,14 @@ rFunction = function(data, sdk,
         mutate(death_month_num = as.integer(death_month),
                death_month     = fct_relevel(death_month, month.abb))
       
-      monthly_mort_plot <- ggplot(monthly_morts, 
-                                  aes(x = death_month, y = factor(death_year), fill = n_mortalities)) +
+      monthly_mort_plot <- ggplot(monthly_morts, aes(x = death_month, y = factor(death_year), 
+                                                     fill = factor(n_mortalities))) +
         geom_tile(color = "white", linewidth = 0.5) +
-        scale_fill_viridis_c(option = "magma", direction = -1, begin = 0.1,
-                             na.value = "grey92", name = "Number of\nmortality events") +
+        scale_fill_viridis_d(option    = "magma", 
+                             direction = -1, 
+                             na.value  = "grey92", 
+                             name      = "Number of\nmortality events", 
+                             drop      = FALSE) +
         scale_x_discrete(position = "top") +
         labs(title    = "Monthly Distribution of Confirmed Mortality Events",
              subtitle = paste0(
@@ -1344,7 +1348,7 @@ rFunction = function(data, sdk,
       censor.shape = "|",
       censor.size = 3,
       legend = "none",
-      pval = TRUE,
+      pval = FALSE,
       surv.median.line = "hv",        
       palette = c("#E69F00", "#56B4E9"),
       ggtheme = theme_classic(base_size = 12) + 
@@ -1353,6 +1357,7 @@ rFunction = function(data, sdk,
               axis.text          = element_text(color = "black"),
               panel.grid.major.y = element_line(color = "gray90"), 
               panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
+              line               = element_line(linewidth = 0.1),
               plot.margin        = margin(10, 10, 10, 10)))
     
     # **want to figure out how to add width, height, units, dpi, bg to artifact 
@@ -1369,13 +1374,13 @@ rFunction = function(data, sdk,
       conf.int = TRUE,
       risk.table = FALSE,
       cumevents = FALSE,                 
-      surv.median.line = "hv",         
-      pval = TRUE,                     
+      pval = FALSE,                     
       xlab = "Time (days)",
       ylab = "Cumulative Hazard",
       title = "Cumulative Hazard",
       subtitle = paste0("N = ", n.ind, ", Events = ", n.events), #update events 
       palette = c("#E69F00", "#56B4E9"),
+      legend = "none",
       ggtheme = theme_classic(base_size = 12) + 
         theme(plot.title   = element_text(face = "bold", size = 14), 
               plot.subtitle = element_text(size = 12, color = "gray50"),
@@ -1443,7 +1448,7 @@ rFunction = function(data, sdk,
     km_curve <- ggsurvplot(
       km_fit,
       data = yearly_survival,
-      title = "Kaplan-Meier Survival Curve",
+      title = paste0("Kaplan-Meier Survival Curve: Survival Year ", subset_condition_define),
       subtitle = sprintf("n = %d intervals • %d deaths • %d censored • median = %s",
                          n_ind, n_events, n_censored, median_label),
       xlab = "Time (days)",
@@ -1453,7 +1458,7 @@ rFunction = function(data, sdk,
       censor.shape = "|",
       censor.size = 3,
       legend = "none",
-      pval = TRUE,
+      pval = FALSE,
       surv.median.line = "hv",        
       palette = c("#E69F00", "#56B4E9"),
       ggtheme = theme_classic(base_size = 12) + 
@@ -1478,13 +1483,13 @@ rFunction = function(data, sdk,
       conf.int = TRUE,
       risk.table = FALSE,
       cumevents = FALSE,                 
-      surv.median.line = "hv",         
-      pval = TRUE,                     
+      pval = FALSE,                     
       xlab = "Time (days)",
       ylab = "Cumulative Hazard",
-      title = "Cumulative Hazard",
-      subtitle = paste0("N = ", n.ind, ", Events = ", n.events), #update events 
+      title = paste0("Cumulative Hazard: Survival Year ", subset_condition_define),
+      subtitle = paste0("N = ", n.ind, ", Events = ", n_events),  
       palette = c("#E69F00", "#56B4E9"),
+      legend = "none",
       ggtheme = theme_classic(base_size = 12) + 
         theme(plot.title   = element_text(face = "bold", size = 14), 
               plot.subtitle = element_text(size = 12, color = "gray50"),
@@ -1664,25 +1669,38 @@ rFunction = function(data, sdk,
     p_val <- 1 - pchisq(test$chisq, df_val)
     p_formatted <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
     
-    # Summary table 
-    per_group <- tibble(`Reproductive condition` = sub(".*=", "", groups),    
-                        `N`                      = test$n,
-                        `Events`                 = test$obs,
-                        `Expected events`        = round(test$exp, 2),
-                        `O/E ratio`              = round(test$obs / test$exp, 2)) %>%
-      mutate(`N (events)` = sprintf("%d (%d)", N, Events),
-             .keep = "unused")
+    # Dynamically update comparison variables 
+    grouping_labels <- c("model"                         = "Tag model",
+                         "sex"                           = "Sex",
+                         "attachment"                    = "Tag Attachment")
+    grouping_var <- grouping_labels[[group_comparison_individual]]
+    if (is.na(grouping_var)) {
+      logger.error("Unknown grouping variable: ", group_comparison_individual)
+    }
     
-    summary_row <- tibble(`Reproductive condition` = "Overall",
+    # Summary table 
+    per_group <- tibble(!!grouping_var   := sub(".*=", "", groups),
+                        `N`               = test$n,
+                        `Events`          = test$obs,
+                        `Expected events` = round(test$exp, 2),
+                        `O/E ratio`       = round(test$obs / test$exp, 2)) %>%
+      mutate(`N (events)` = sprintf("%d (%d)", N, Events), .keep = "unused")
+    
+    
+    summary_row <- tibble(!!grouping_var          := "Overall",
                           `N (events)`             = sprintf("%d (%d)", n_total, events_total),
                           `Chisq (log-rank)`       = chisq_val,
                           `df`                     = df_val,
                           `p-value`                = p_formatted)
     
-    logrank_table <- bind_rows(per_group, summary_row)
     logrank_table <- logrank_table %>%
-      select(`Reproductive condition`, `N (events)`, `Expected events`, `O/E ratio`,
-             `Chisq (log-rank)`, df, `p-value`)
+      dplyr::select(any_of(grouping_var), 
+                    `N (events)`,
+                    `Expected events`,
+                    `O/E ratio`,
+                    `Chisq (log-rank)`,
+                    df,
+                    `p-value`)
     
     # double check that adding row.names = F doesn't cause issues 
     write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv", row.names = F))
@@ -1690,19 +1708,16 @@ rFunction = function(data, sdk,
     # KM comparison plots ---
     km_fit_comp <- surv_fit(surv_formula, data = summary_table)  # use surv_fit instead of survfit
     
-    # Dynamically update comparison variables 
-    grouping_labels <- c("animal_reproductive_condition" = "Reproductive Condition",
-                         "sex"                           = "Sex",
-                         "attachment"                    = "Collar Attachment")#,
-                         #"lifestage"                     = "Life-stage")
-    grouping_var <- grouping_labels[[group_comparison_individual]]
-    if (is.na(grouping_var)) {
-      logger.error("Unknown grouping variable: ", group_comparison_individual)
-    }
+    # Titles and formatting 
     title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
-    subtitle_text <- paste0("N(",logrank_table$`Reproductive condition`[1],"): ", test$n[1], 
-                            ", N(", logrank_table$`Reproductive condition`[2],"): ", test$n[2], 
-                            "\nP-value: ", round(test$pvalue, 3))
+    
+    group_rows <- logrank_table %>% filter(!!sym(grouping_var) != "Overall")
+    subtitle_text <- paste0(paste(sprintf("N(%s): %s", 
+                                          group_rows[[grouping_var]],
+                                          group_rows$`N (events)`),
+                                  collapse = ", "),
+                            "\nP-value: ", 
+                            logrank_table$`p-value`[logrank_table[[grouping_var]] == "Overall"])
     
     old_strata_names <- names(km_fit_comp$strata)
     new_strata_names <- sub(".*=", "", old_strata_names)
@@ -1710,64 +1725,34 @@ rFunction = function(data, sdk,
     
     n_groups <- length(names(km_fit_comp$strata))
     my_palette <- viridis(n_groups, option = "turbo")
-    risk_table_height <- n_groups * 0.09 #THIS NEEDS TO BE DEBUGGED 
-      
+    
     # Plot 
-    if(add_risk_table == TRUE){
-      km_comp_curve <- ggsurvplot(km_fit_comp,
-                                  data = summary_table,
-                                  title = title_text,
-                                  subtitle = subtitle_text,
-                                  conf.int = TRUE,
-                                  risk.table = TRUE,
-                                  risk.table.title = "Number at risk",
-                                  risk.table.height = risk_table_height,
-                                  surv.median.line = "hv",
-                                  palette = my_palette, 
-                                  xlab = "Days at risk",
-                                  ylab = "Survival probability",
-                                  legend.title = grouping_var,
-                                  legend = "bottom",
-                                  legend.labs = levels(summary_table[[group_comparison_individual]]),
-                                  censor.shape = "|",
-                                  censor.size = 4,
-                                  font.main = c(14, "bold", "black"),
-                                  font.x = 12, font.y = 12, font.tickslab = 11, 
-                                  ggtheme = theme_classic(base_size = 12) +
-                                    theme(
-                                      plot.title   = element_text(face = "bold", size = 14),
-                                      plot.subtitle = element_text(size = 12, color = "gray50"),
-                                      axis.text    = element_text(color = "black"),
-                                      panel.grid.major.y = element_line(color = "gray90"),
-                                      panel.border = element_rect(color="black", fill = NA, linewidth = 0.5),
-                                      plot.margin  = margin(10, 10, 10, 10)))
-    } else {
-      km_comp_curve <- ggsurvplot(km_fit_comp,
-                                  data = summary_table,
-                                  title = title_text,
-                                  subtitle = subtitle_text,
-                                  conf.int = TRUE,
-                                  risk.table = FALSE,
-                                  surv.median.line = "hv",
-                                  palette = my_palette, 
-                                  xlab = "Days at risk",
-                                  ylab = "Survival probability",
-                                  legend.title = grouping_var,
-                                  legend = "bottom",
-                                  legend.labs = levels(summary_table[[group_comparison_individual]]),
-                                  censor.shape = "|",
-                                  censor.size = 4,
-                                  font.main = c(14, "bold", "black"),
-                                  font.x = 12, font.y = 12, font.tickslab = 11, 
-                                  ggtheme = theme_classic(base_size = 12) +
-                                    theme(
-                                      plot.title   = element_text(face = "bold", size = 14),
-                                      plot.subtitle = element_text(size = 12, color = "gray50"),
-                                      axis.text    = element_text(color = "black"),
-                                      panel.grid.major.y = element_line(color = "gray90"),
-                                      panel.border = element_rect(color="black", fill = NA, linewidth = 0.5),
-                                      plot.margin  = margin(10, 10, 10, 10)))
-    }
+    (km_comp_curve <- ggsurvplot(km_fit_comp,
+                                 data = summary_table,
+                                 title = title_text,
+                                 subtitle = subtitle_text,
+                                 #conf.int = TRUE,
+                                 #conf.in.style = "step",
+                                 risk.table = FALSE,
+                                 #surv.median.line = "hv",
+                                 palette = my_palette, 
+                                 xlab = "Days at risk",
+                                 ylab = "Survival probability",
+                                 legend.title = grouping_var,
+                                 legend = "bottom",
+                                 legend.labs = levels(summary_table[[group_comparison_individual]]),
+                                 censor.shape = "|",
+                                 censor.size = 4,
+                                 font.main = c(14, "bold", "black"),
+                                 font.x = 12, font.y = 12, font.tickslab = 11, 
+                                 ggtheme = theme_classic(base_size = 12) +
+                                   theme(
+                                     plot.title   = element_text(face = "bold", size = 14),
+                                     plot.subtitle = element_text(size = 12, color = "gray50"),
+                                     axis.text    = element_text(color = "black"),
+                                     panel.grid.major.y = element_line(color = "gray90"),
+                                     panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
+                                     plot.margin  = margin(10, 10, 10, 10))))
     
     # want to figure out how to add width, height, units, dpi, bg to artifact 
     artifact <- appArtifactPath("km_comparison_curves.png")
