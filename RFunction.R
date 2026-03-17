@@ -24,7 +24,6 @@ rFunction = function(data, sdk,
                      subset_condition_define, 
                      group_comparison_individual,
                      survival_yr_start,
-                     animal_birth_hatch_year, 
                      animal_birth_hatch_year_table, 
                      life_table_days, 
                      calc_month_mort) {
@@ -34,16 +33,8 @@ rFunction = function(data, sdk,
   
   ## Load auxiliary data ------------------------------------------------------ 
 
-  if(!is.null(animal_birth_hatch_year)){
-    animal_birth_hatch_year <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year"))
-  }
-  
   if(!is.null(animal_birth_hatch_year_table)){
     animal_birth_hatch_year_table <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year_table"))
-  }
-  
-  if (xor(!is.null(animal_birth_hatch_year), !is.null(animal_birth_hatch_year_table))){
-    logger.error("Missing auxiliary files.")
   }
   
   
@@ -65,7 +56,7 @@ rFunction = function(data, sdk,
       "timestamp")))
   
   # Extract relevant track-level attributes
-  desired_cols <- c("animal_life_stage", "animal_reproductive_condition", "attachment_type",
+  desired_cols <- c("animal_birth_hatch_year", "attachment_type",
                     "capture_method", "capture_timestamp", "death_comments",
                     "deploy_off_timestamp", "deploy_on_timestamp", "deployment_comments",
                     "deployment_end_comments", "deployment_end_type", "deployment_id", 
@@ -108,12 +99,11 @@ rFunction = function(data, sdk,
   # Summarize timestamps and location count per individual
   summary_table <- events_with_ind |>
     group_by(individual_id, individual_local_identifier) |>
-    summarise(
-      first_timestamp = min(as.Date(timestamp), na.rm = TRUE),
-      last_timestamp  = max(as.Date(timestamp), na.rm = TRUE),
-      n_locations     = n(),
-      n_deployments   = if ("deployment_id" %in% names(events_with_ind)) {
-        n_distinct(deployment_id, na.rm = TRUE)
+    summarise(first_timestamp = min(as.Date(timestamp), na.rm = TRUE),
+              last_timestamp  = max(as.Date(timestamp), na.rm = TRUE),
+              n_locations     = n(),
+              n_deployments   = if ("deployment_id" %in% names(events_with_ind)) {
+                n_distinct(deployment_id, na.rm = TRUE)
       } else {
         1L  
       },
@@ -179,8 +169,7 @@ rFunction = function(data, sdk,
         "mortality_date",
         "deployment_end_comments",
         "deployment_end_type",
-        "animal_life_stage",
-        "animal_reproductive_condition")),
+        "animal_birth_hatch_year")),
         ~ if_else(. == "", NA_character_, .)),
       
       # Convert deploy timestamps 
@@ -203,9 +192,9 @@ rFunction = function(data, sdk,
       dplyr::select(-missing_timestamp_start)
     
     if (n_missing > 0) {
-      logger.info(sprintf("Warning: Replaced %d missing deploy_on_timestamp value%s with first_timestamp.",
-                       n_missing,
-                       if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
+      logger.info(
+        sprintf("Warning: Replaced %d missing deploy_on_timestamp value%s with first_timestamp.",
+                       n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -233,9 +222,9 @@ rFunction = function(data, sdk,
       dplyr::select(-missing_timestamp_end)
     
     if (n_missing > 0) {
-      logger.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with last_timestamp.", 
-                       n_missing,
-                       if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
+      logger.info(
+        sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with last_timestamp.", 
+                n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -253,8 +242,7 @@ rFunction = function(data, sdk,
     
     if (n_missing > 0) {
       logger.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with current date.",
-                       n_missing,
-                       if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
+                       n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -263,8 +251,9 @@ rFunction = function(data, sdk,
     summary_table <- summary_table %>% filter(!is.na(deploy_off_timestamp))
     
     if (n_missing > 0) {
-      logger.info(sprintf("Warning: Removed %d deploy_off_timestamp and/or deploy_on_timestamp value%s that were NA.", n_missing,
-                       if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
+      logger.info(
+        sprintf("Warning: Removed %d deploy_off_timestamp and/or deploy_on_timestamp value%s that were NA.", 
+                n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -275,9 +264,9 @@ rFunction = function(data, sdk,
   n_removed <- n_original - nrow(summary_table)  
   
   if (n_removed > 0) {
-    logger.info(sprintf("Warning: Removed %d individual%s where deploy_off_timestamp < deploy_on_timestamp.",
-                    n_removed, if (n_removed == 1) "" else "s"),
-            call. = FALSE, immediate. = TRUE)
+    logger.info(
+      sprintf("Warning: Removed %d individual%s where deploy_off_timestamp < deploy_on_timestamp.",
+              n_removed, if (n_removed == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
   }
   
   
@@ -343,9 +332,9 @@ rFunction = function(data, sdk,
     
     n_removed <- n_original - nrow(summary_table)
     if (n_removed > 0) {
-      logger.info(sprintf("Warning: %d record%s did not overlap the user-defined study window and were removed.",
-                      n_removed, if (n_removed == 1) "" else "s"),
-              call. = FALSE, immediate. = TRUE)
+      logger.info(
+        sprintf("Warning: %d record%s did not overlap the user-defined study window and were removed.",
+                n_removed, if (n_removed == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -532,7 +521,7 @@ rFunction = function(data, sdk,
       dplyr::select(individual_id,
                     individual_local_identifier,
                     any_of(c("sex",
-                             "animal_life_stage",
+                             "animal_birth_hatch_year",
                              "attachment_type",
                              "model"))) %>% 
       distinct() %>% 
@@ -618,17 +607,11 @@ rFunction = function(data, sdk,
 
   # Note: this needs both auxiliary files to be loaded (errors earlier in code upon loading) 
   # Note: this needs "survival_yr_start" to be defined 
-  if(!is.null(animal_birth_hatch_year) && is.null(survival_yr_start)){
+  if(!is.null(animal_birth_hatch_year_table) && is.null(survival_yr_start)){
     logger.error("Calculating life-stage requires survival years to be defined.")
   } 
   
-  if(!is.null(survival_yr_start) && !is.null(animal_birth_hatch_year)){
-    
-    # Join birth_hatch_year 
-    yearly_survival <- yearly_survival %>%
-      left_join(animal_birth_hatch_year %>% 
-                  select(individual_id, animal_birth_hatch_year),
-                by = "individual_id")
+  if(!is.null(survival_yr_start) && !is.null(animal_birth_hatch_year_table)){
     
     # Calculate age and age_class
     yearly_survival <- yearly_survival %>%
@@ -1727,7 +1710,7 @@ rFunction = function(data, sdk,
     my_palette <- viridis(n_groups, option = "turbo")
     
     # Plot 
-    (km_comp_curve <- ggsurvplot(km_fit_comp,
+    km_comp_curve <- ggsurvplot(km_fit_comp,
                                  data = summary_table,
                                  title = title_text,
                                  subtitle = subtitle_text,
@@ -1752,7 +1735,7 @@ rFunction = function(data, sdk,
                                      axis.text    = element_text(color = "black"),
                                      panel.grid.major.y = element_line(color = "gray90"),
                                      panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
-                                     plot.margin  = margin(10, 10, 10, 10))))
+                                     plot.margin  = margin(10, 10, 10, 10)))
     
     # want to figure out how to add width, height, units, dpi, bg to artifact 
     artifact <- appArtifactPath("km_comparison_curves.png")
@@ -1764,87 +1747,60 @@ rFunction = function(data, sdk,
     ## Cumulative hazard comparison plots ---
     
     # Prepare statistics for subtitle 
-    n_per_group <- km_fit_comp$n
-    sum_fit <- summary(km_fit_comp)
+    n_per_group      <- km_fit_comp$n
+    sum_fit          <- summary(km_fit_comp)
     events_per_group <- tapply(sum_fit$n.event, sum_fit$strata, sum, na.rm = TRUE)
+    
+    # Clean strata names  
     clean_strata <- gsub("^.*=", "", names(km_fit_comp$strata))
-    subtitle_parts <- mapply(function(group, n, ev) sprintf("N(%s) = %d, Events = %d", group, n, ev),
-                             clean_strata, n_per_group, events_per_group)
-    subtitle_text <- paste(subtitle_parts, collapse = "\n")
-    test <- surv_pvalue(km_fit_comp, data = summary_table)  
-    pval_text <- sprintf("Log-rank p = %.3f", test$pval)
-    cumhaz_subtitle <- paste0(subtitle_text, "\n", pval_text)
+    
+    # Create one-line subtitle for groups: "N(Group): N (events)"
+    subtitle_parts <- mapply(function(group, n, ev) {
+      sprintf("N(%s): %d (%d)", group, n, ev)
+    },
+    clean_strata, n_per_group, events_per_group, SIMPLIFY = FALSE)
+    
+    groups_line <- paste(subtitle_parts, collapse = ", ")
+    test <- surv_pvalue(km_fit_comp, data = summary_table)
+    pval_text <- sprintf("P-value: %.3f", test$pval)
+    subtitle_text <- paste0(groups_line, "\n", pval_text)
     
     # Plot 
-    if(add_risk_table == TRUE){
-      cum_hazard_comp <- ggsurvplot(km_fit_comp,
-                                    data = summary_table,
-                                    fun          = "cumhaz",
-                                    conf.int     = TRUE,
-                                    censor.shape = "|",
-                                    censor.size  = 4,
-                                    title        = paste0("Cumulative Hazard by ", grouping_var),
-                                    subtitle     = cumhaz_subtitle,   
-                                    xlab         = "Days at risk",
-                                    ylab         = "Cumulative Hazard",
-                                    legend       = "bottom",
-                                    legend.title = grouping_var,
-                                    legend.labs  = levels(summary_table[[group_comparison_individual]]),
-                                    palette      = my_palette,
-                                    risk.table   = TRUE,
-                                    cumevents    = TRUE,
-                                    tables.height = risk_table_height,
-                                    tables.y.text = FALSE,
-                                    font.main    = c(14, "bold", "black"),
-                                    font.x       = 12, font.y = 12, font.tickslab = 11,
-                                    ggtheme = theme_classic(base_size = 12) +
-                                      theme(plot.title    = element_text(face = "bold", size = 14),
-                                            plot.subtitle = element_text(size = 12, color = "gray50"),
-                                            axis.text     = element_text(color = "black"),
-                                            panel.grid.major.y = element_line(color = "gray90"),
-                                            panel.border  = element_rect(color = "black", fill=NA, linewidth=0.5),
-                                            plot.margin   = margin(10, 10, 10, 10),
-                                            legend.position = "bottom",
-                                            legend.title  = element_text(size = 11),
-                                            legend.text   = element_text(size = 10)))
-    } else {
-      cum_hazard_comp <- ggsurvplot(km_fit_comp,
-                                    data = summary_table,
-                                    fun          = "cumhaz",
-                                    conf.int     = TRUE,
-                                    censor.shape = "|",
-                                    censor.size  = 4,
-                                    title        = paste0("Cumulative Hazard by ", grouping_var),
-                                    subtitle     = cumhaz_subtitle,   
-                                    xlab         = "Days at risk",
-                                    ylab         = "Cumulative Hazard",
-                                    legend       = "bottom",
-                                    legend.title = grouping_var,
-                                    legend.labs  = levels(summary_table[[group_comparison_individual]]),
-                                    palette      = my_palette,
-                                    risk.table   = FALSE,
-                                    cumevents    = FALSE,
-                                    font.main    = c(14, "bold", "black"),
-                                    font.x       = 12, font.y = 12, font.tickslab = 11,
-                                    ggtheme = theme_classic(base_size = 12) +
-                                      theme(plot.title    = element_text(face = "bold", size = 14),
-                                            plot.subtitle = element_text(size = 12, color = "gray50"),
-                                            axis.text     = element_text(color = "black"),
-                                            panel.grid.major.y = element_line(color = "gray90"),
-                                            panel.border  = element_rect(color = "black", fill=NA, linewidth=0.5),
-                                            plot.margin   = margin(10, 10, 10, 10),
-                                            legend.position = "bottom",
-                                            legend.title  = element_text(size = 11),
-                                            legend.text   = element_text(size = 10)))
-    }
-  }
-  
-  # want to figure out how to add width, height, units, dpi, bg to artifact 
-  artifact <- appArtifactPath("cum_hazard_comparison_plot.png")
-  logger.info(paste("Saving cumulative hazard comparison plots:", artifact))
-  png(artifact)
-  cum_hazard_comp
-  dev.off()
+    cum_hazard_comp <- ggsurvplot(km_fit_comp,
+                                  data = summary_table,
+                                  fun          = "cumhaz",
+                                  #conf.int     = TRUE,
+                                  censor.shape = "|",
+                                  censor.size  = 4,
+                                  title        = paste0("Cumulative Hazard by ", grouping_var),
+                                  subtitle     = subtitle_text,   
+                                  xlab         = "Days at risk",
+                                  ylab         = "Cumulative Hazard",
+                                  legend       = "bottom",
+                                  legend.title = grouping_var,
+                                  legend.labs  = levels(summary_table[[group_comparison_individual]]),
+                                  palette      = my_palette,
+                                  risk.table   = FALSE,
+                                  cumevents    = FALSE,
+                                  font.main    = c(14, "bold", "black"),
+                                  font.x       = 12, font.y = 12, font.tickslab = 11,
+                                  ggtheme = theme_classic(base_size = 12) +
+                                    theme(plot.title    = element_text(face = "bold", size = 14),
+                                          plot.subtitle = element_text(size = 12, color = "gray50"),
+                                          axis.text     = element_text(color = "black"),
+                                          panel.grid.major.y = element_line(color = "gray90"),
+                                          panel.border  = element_rect(color = "black", fill=NA, linewidth=0.5),
+                                          plot.margin   = margin(10, 10, 10, 10),
+                                          legend.position = "bottom",
+                                          legend.title  = element_text(size = 11),
+                                          legend.text   = element_text(size = 10)))
+    
+    # want to figure out how to add width, height, units, dpi, bg to artifact 
+    artifact <- appArtifactPath("cum_hazard_comparison_plot.png")
+    logger.info(paste("Saving cumulative hazard comparison plots:", artifact))
+    png(artifact)
+    cum_hazard_comp
+    dev.off()
     
   }
   

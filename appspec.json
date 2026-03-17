@@ -141,12 +141,6 @@
       "type": "INSTANT"
     },
     {
-    "id": "animal_birth_hatch_year",
-    "name": "Animal birth/hatch year",
-    "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information for each individual: individual_id, individual_local_identifier, animal_birth_hatch_year (see template on GitHub). The app expects a file with the extension `.csv`.",
-    "type": "USER_FILE"
-    },
-    {
     "id": "animal_birth_hatch_year_table",
     "name": "Animal birth/hatch year definitions",
     "description": "For survival year analyses that include animal life stage, upload a spreadsheet containing the following information: animal_life_stage, year_at_start (that is, a file that maps age to lifestage; see template on GitHub). The app expects a file with the extension: `.csv`.",

@@ -130,7 +130,7 @@ Note that a larger sample size is required for comparison across groups.
 
 `Survival year start date`: If comparing across survival years (see above), the user can define the day and month that each 'survival year' begins. The code assumes a year runs 365(6) days. Default is null. Unit: `date`. 
 
-`Animal birth/hatch year` and `Animal birth/hatch year definitions`: Optional auxiliary files a user can upload if they are running analyses by survival year and wish to classify individual life stage within a specific year. The first file indicates the birth/hatch year of each individual included in the study; the second file maps animal age to user-defined life stages. Templates for both files can be found on the Survival App GitHub. App expects files in `.csv` format. 
+`Animal birth/hatch year definitions`: Optional auxiliary file a user can upload if they are running analyses by survival year and wish to classify individual life stage within a specific year. This file maps animal age to user-defined life stages. A template can be found on the Survival App GitHub. App expects files in `.csv` format. 
 
 `Life table length`: How often to generate statistical output in the life table (e.g., every # days). Default value is 30 days. Unit: `days`. 
 
