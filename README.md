@@ -77,9 +77,14 @@ This app does *not* perform a power analysis prior to performing the survival an
 
 Note that a larger sample size is required for comparison across groups. 
 
-**Subetting data**: Users can select what subset of individuals to include in the study (only females, only individuals alive within a specific survival year, individuals wearing certain collar types, etc.).
+**Subsetting data**: Users can select what subset of individuals to include in the study (only females, only individuals alive within a specific survival year, individuals wearing certain collar types, etc.).
 
-**Comparison types:** This app enables the user to select one of four grouping options to compare across. These currently include sex, lifestage, tag attachment type, and tag model. These grouping classifications are cleaned and standardized for capitalization and white-space errors (e.g., "male" and "Male" will register as the same class) but note that other mispecifications (e.g., "male " vs. "M") will calculate as separate groups. 
+**Comparison types**: This app enables the user to select one of four grouping options to compare across. These currently include sex, life stage, tag attachment type, and tag model. These grouping classifications are cleaned and standardized for capitalization and white-space errors (e.g., "male" and "Male" will register as the same class) but note that other misspecifications (e.g., "male " vs. "M") will calculate as separate groups. 
+
+**Survival years**: Users can define a "survival year" for analyses, different from a calendar year in that this period extends from when an animal is typically born to the end of their first year, etc.  
+
+**Life stages**: Users can upload auxiliary information (see template: https://github.com/meredithspalmer/MoveApps_Survival/blob/master/animal_birth_hatch_year_table.csv) that links individual animal ages to species-specific life stages. 
+
 
 ### Input type
 
@@ -88,6 +93,7 @@ Note that a larger sample size is required for comparison across groups.
 ### Output type
 
 `move2::move2_loc`
+
 
 ### Artefacts
 
@@ -130,7 +136,7 @@ Note that a larger sample size is required for comparison across groups.
 
 `Survival year start date`: If comparing across survival years (see above), the user can define the day and month that each 'survival year' begins. The code assumes a year runs 365(6) days. Default is null. Unit: `date`. 
 
-`Animal birth/hatch year definitions`: Optional auxiliary file a user can upload if they are running analyses by survival year and wish to classify individual life stage within a specific year. This file maps animal age to user-defined life stages. A template can be found on the Survival App GitHub. App expects files in `.csv` format. 
+`Animal birth/hatch year definitions`: Optional auxiliary file a user can upload if they are running analyses by survival year and wish to classify individual life stage within a specific year. This file maps animal age to user-defined life stages. A template can be found here: https://github.com/meredithspalmer/MoveApps_Survival/blob/master/animal_birth_hatch_year_table.csv. App expects files in `.csv` format. 
 
 `Life table length`: How often to generate statistical output in the life table (e.g., every # days). Default value is 30 days. Unit: `days`. 
 
