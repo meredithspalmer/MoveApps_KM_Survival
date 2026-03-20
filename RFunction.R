@@ -81,19 +81,16 @@ rFunction = function(data, sdk,
     events_with_ind <- events |>
       left_join(tracks, by = "deployment_id")
     
-  } else {
-    if (!"individual_local_identifier" %in% names(events)) {
-      logger.fatal("Cannot join: neither deployment_id nor individual_local_identifier is available in events")
+    } else {
+      if (!"individual_local_identifier" %in% names(events)) {
+        logger.fatal("Cannot join: neither deployment_id nor individual_local_identifier is available in events")
+      }
+      logger.info("Joining on individual_local_identifier (deployment_id join not possible)")
+      events_with_ind <- events |> left_join(tracks, by = "individual_local_identifier")
     }
-    logger.info("Joining on individual_local_identifier (deployment_id join not possible)")
-    
-    events_with_ind <- events |>
-      left_join(tracks, by = "individual_local_identifier")
-  }
   
   events_with_ind <- events_with_ind |>
-    relocate(any_of(c("individual_id", "individual_local_identifier", "deployment_id",
-                      "timestamp")),
+    relocate(any_of(c("individual_id", "individual_local_identifier", "deployment_id", "timestamp")),
              .before = everything())
   
   # Summarize timestamps and location count per individual
@@ -102,26 +99,30 @@ rFunction = function(data, sdk,
     summarise(first_timestamp = min(as.Date(timestamp), na.rm = TRUE),
               last_timestamp  = max(as.Date(timestamp), na.rm = TRUE),
               n_locations     = n(),
-              n_deployments   = if ("deployment_id" %in% names(events_with_ind)) {
-                n_distinct(deployment_id, na.rm = TRUE)
-                } else {
-                  1L  
-                  },
+              n_deployments   = 
+                if ("deployment_id" %in% names(events_with_ind)) {
+                  n_distinct(deployment_id, na.rm = TRUE)
+                  } else {
+                    1L  
+                    },
               
-              # Timestamp columns: min / max if present
-              timestamp_first_deployed_location = if ("timestamp_first_deployed_location" %in% names(events_with_ind))
-                min(timestamp_first_deployed_location, na.rm = TRUE) else NA,
+              # Time-stamp columns: min / max if present
+              timestamp_first_deployed_location = 
+                if ("timestamp_first_deployed_location" %in% names(events_with_ind))
+                  min(timestamp_first_deployed_location, na.rm = TRUE) else NA,
               
-              timestamp_last_deployed_location = if ("timestamp_last_deployed_location" %in% names(events_with_ind))
-                max(timestamp_last_deployed_location, na.rm = TRUE) else NA,
+              timestamp_last_deployed_location = 
+                if ("timestamp_last_deployed_location" %in% names(events_with_ind))
+                  max(timestamp_last_deployed_location, na.rm = TRUE) else NA,
               
-              deploy_on_timestamp = if ("deploy_on_timestamp" %in% names(events_with_ind)) {
-                if (all(is.na(deploy_on_timestamp))) as.POSIXct(NA) 
-                else min(deploy_on_timestamp, na.rm = TRUE)
-                } else as.POSIXct(NA),
+              deploy_on_timestamp = 
+                if ("deploy_on_timestamp" %in% names(events_with_ind)) {
+                  if (all(is.na(deploy_on_timestamp))) as.POSIXct(NA) 
+                  else min(deploy_on_timestamp, na.rm = TRUE)
+                  } else as.POSIXct(NA),
               
               deploy_off_timestamp = if ("deploy_off_timestamp" %in% names(events_with_ind)) {
-                if (all(is.na(deploy_off_timestamp))) as.POSIXct(NA) 
+                if (all(is.na(deploy_off_timestamp))) as.POSIXct(NA)
                 else max(deploy_off_timestamp, na.rm = TRUE)
                 } else as.POSIXct(NA),
               
@@ -307,15 +308,15 @@ rFunction = function(data, sdk,
   # Define window 
   effective_start <- if (is.na(time_period_start)) {
     min(summary_table$deploy_on_timestamp, na.rm = TRUE)
-  } else {
-    time_period_start
-  }
+    } else {
+      time_period_start
+    }
   
   effective_end <- if (is.na(time_period_end)) {
     max(summary_table$deploy_off_timestamp, na.rm = TRUE)
-  } else {
-    time_period_end
-  }  
+    } else {
+      time_period_end
+    }  
   
   # Run updates 
   if(!is.na(time_period_start) | !is.na(time_period_end)){
@@ -351,9 +352,10 @@ rFunction = function(data, sdk,
                          time_period_start)
   
   summary_table <- summary_table %>%
-    mutate(origin_date = origin_date, 
-           entry_time_days  = as.numeric(difftime(deploy_on_timestamp, origin_date, units = "days")),
-           exit_time_days   = as.numeric(difftime(deploy_off_timestamp, origin_date, units = "days")))
+    mutate(analysis_entry_date = pmax(deploy_on_timestamp, effective_start, na.rm = TRUE),
+           analysis_exit_date  = pmin(deploy_off_timestamp, effective_end, na.rm = TRUE),
+           entry_time_days = as.numeric(difftime(analysis_entry_date, origin_date, units = "days")),
+           exit_time_days  = as.numeric(difftime(analysis_exit_date,  origin_date, units = "days"))) 
 
   
   ## Calculate mortality indicator --------------------------------------------
@@ -489,11 +491,11 @@ rFunction = function(data, sdk,
         survival_year <- y
         period_start  <- period_start_this_year
         period_end    <- safe_make_date(y + 1, start_month, start_day) - days(1)
-      } else {
-        survival_year <- y - 1
-        period_start  <- safe_make_date(y - 1, start_month, start_day)
-        period_end    <- safe_make_date(y, start_month, start_day) - days(1)
-      }
+        } else {
+          survival_year <- y - 1
+          period_start  <- safe_make_date(y - 1, start_month, start_day)
+          period_end    <- safe_make_date(y, start_month, start_day) - days(1)
+        }
       
       tibble(survival_year = survival_year,
              period_start  = period_start,
@@ -611,7 +613,7 @@ rFunction = function(data, sdk,
   
   ## Calculate life stages per year (if selected) -----------------------------
 
-  # Note: this needs both auxiliary files to be loaded (errors earlier in code upon loading) 
+  # Note: this needs auxiliary file to be loaded (errors earlier in code upon loading) 
   # Note: this needs "survival_yr_start" to be defined 
   if(!is.null(animal_birth_hatch_year_table) && is.null(survival_yr_start)){
     logger.error("Calculating life-stage requires survival years to be defined.")
@@ -1107,49 +1109,55 @@ rFunction = function(data, sdk,
     
     # Calculate monthly mortality
     if(calc_month_mort == TRUE){
+      
+      # Calculate monthly morts across entire defined study period 
+      min_date <- min(summary_table$deploy_on_timestamp, na.rm = TRUE)
+      max_date <- max(summary_table$deploy_off_timestamp, na.rm = TRUE)
+      full_years <- seq(year(min_date), year(max_date), by = 1)
+      
       mortality_data <- summary_table %>%
         filter(mortality_event == 1) %>%
-        mutate(death_date  = as.Date(deploy_off_timestamp),
-               death_year  = year(death_date),
-               death_month = month(death_date, label = TRUE, abbr = TRUE),
-               death_month = factor(death_month, levels = month.abb, ordered = TRUE)) %>%
+        mutate(death_date   = as.Date(deploy_off_timestamp),
+               death_year   = year(death_date),
+               death_month  = month(death_date, label = TRUE, abbr = TRUE),
+               death_month  = factor(death_month, levels = month.abb, ordered = TRUE)) %>%
         dplyr::select(death_year, death_month)
       
       monthly_morts <- mortality_data %>%
         count(death_year, death_month, name = "n_mortalities") %>%
-        complete(death_year = seq(min(death_year, na.rm = TRUE),
-                                  max(death_year, na.rm = TRUE)),
+        complete(death_year  = full_years,
                  death_month = factor(month.abb, levels = month.abb, ordered = TRUE),
                  fill = list(n_mortalities = 0)) %>%
-        mutate(death_month_num = as.integer(death_month),   
+        mutate(death_month_num = as.integer(death_month),
                death_month     = fct_relevel(death_month, month.abb))
       
-      # Plot
+      # Plot 
       monthly_mort_plot <- ggplot(monthly_morts, aes(x = death_month, y = factor(death_year), 
                                                      fill = factor(n_mortalities))) +
         geom_tile(color = "white", linewidth = 0.5) +
         scale_fill_viridis_d(option    = "magma",
                              direction = -1,
                              na.value  = "grey92",
-                             name      = "Number of\nmortality events", 
+                             name      = "Number of\nmortality events",
                              drop      = FALSE) +
         scale_x_discrete(position = "top") +
         labs(title    = "Monthly Distribution of Confirmed Mortality Events",
-             subtitle = paste0("Total events: ", sum(monthly_morts$n_mortalities), 
-                               " • Time span: ", format(min(summary_table$deploy_on_timestamp), "%b %Y"), 
-                               " to ", format(max(summary_table$deploy_off_timestamp), "%b %Y")),
-             x        = NULL,
-             y        = "Year") +
+             subtitle = paste0(
+               "Total events: ", sum(monthly_morts$n_mortalities, na.rm = TRUE),
+               " • Time span: ", format(min_date, "%b %Y"),
+               " to ", format(max_date, "%b %Y")),
+             x = NULL,
+             y = "Year") +
         theme_minimal(base_size = 14) +
-        theme(panel.grid       = element_blank(),
-              axis.ticks       = element_blank(),
-              legend.position  = "right",
-              legend.title     = element_text(size = 11),
-              legend.text      = element_text(size = 10),
-              plot.title       = element_text(face = "bold", hjust = 0.5, size = 16),
-              plot.subtitle    = element_text(hjust = 0.5, size = 12),
-              axis.text.x      = element_text(size = 11, face = "bold"),
-              axis.text.y      = element_text(size = 11))
+        theme(panel.grid        = element_blank(),
+              axis.ticks        = element_blank(),
+              legend.position   = "right",
+              legend.title      = element_text(size = 11),
+              legend.text       = element_text(size = 10),
+              plot.title        = element_text(face = "bold", hjust = 0.5, size = 16),
+              plot.subtitle     = element_text(hjust = 0.5, size = 12),
+              axis.text.x       = element_text(size = 11, face = "bold"),
+              axis.text.y       = element_text(size = 11))
       
       # want to figure out how to add width, height, units, dpi, bg to artifact 
       artifact <- appArtifactPath("monthly_mortality.png")
