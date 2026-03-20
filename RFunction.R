@@ -104,74 +104,80 @@ rFunction = function(data, sdk,
               n_locations     = n(),
               n_deployments   = if ("deployment_id" %in% names(events_with_ind)) {
                 n_distinct(deployment_id, na.rm = TRUE)
-      } else {
-        1L  
-      },
-      
-      # Timestamp columns: min / max if present
-      timestamp_first_deployed_location = if ("timestamp_first_deployed_location" %in% names(events_with_ind))
-        min(timestamp_first_deployed_location, na.rm = TRUE) else NA,
-      
-      timestamp_last_deployed_location = if ("timestamp_last_deployed_location" %in% names(events_with_ind))
-        max(timestamp_last_deployed_location, na.rm = TRUE) else NA,
-      
-      deploy_on_timestamp = if ("deploy_on_timestamp" %in% names(events_with_ind)) {
-        if (all(is.na(deploy_on_timestamp))) as.POSIXct(NA) else min(deploy_on_timestamp, na.rm = TRUE)
-      } else as.POSIXct(NA),
-      
-      deploy_off_timestamp = if ("deploy_off_timestamp" %in% names(events_with_ind)) {
-        if (all(is.na(deploy_off_timestamp))) as.POSIXct(NA) else max(deploy_off_timestamp, na.rm = TRUE)
-      } else as.POSIXct(NA),
-      
-      # Mortality location column: 1/0 if filled if present 
-      mortality_location_filled = if ("mortality_location_filled" %in% names(events_with_ind))
-        as.integer(any(mortality_location_filled >= 1, na.rm = TRUE)) else NA_integer_,
-      
-      # Categorical columns: collapsed unique if present
-      sex = if ("sex" %in% names(events_with_ind))
-        str_c(unique(sex[!is.na(sex)]), collapse = " | ") else NA_character_,
-      
-      mortality_type = if ("mortality_type" %in% names(events_with_ind)) {
-        str_c(unique(mortality_type[!is.na(mortality_type)]), collapse = " | ")
-      } else NA_character_,
-      
-      mortality_date = if ("mortality_date" %in% names(events_with_ind)) {
-        str_c(unique(mortality_date[!is.na(mortality_date)]), collapse = " | ")
-      } else NA_character_,
-      
-      death_comments = if ("death_comments" %in% names(events_with_ind))
-        str_c(unique(death_comments[!is.na(death_comments)]), collapse = " | ") else NA_character_,
-      
-      deployment_end_comments = if ("deployment_end_comments" %in% names(events_with_ind))
-        str_c(unique(deployment_end_comments[!is.na(deployment_end_comments)]), collapse = " | ") else NA_character_,
-      
-      deployment_end_type = if ("deployment_end_type" %in% names(events_with_ind))
-        str_c(unique(deployment_end_type[!is.na(deployment_end_type)]), collapse = " | ") else NA_character_,
-      
-      animal_life_stage = if ("animal_life_stage" %in% names(events_with_ind))
-        str_c(unique(animal_life_stage[!is.na(animal_life_stage)]), collapse = " | ") else NA_character_,
-      
-      model = if ("model" %in% names(events_with_ind)) {
-        str_c(unique(model[!is.na(model)]), collapse = " | ")
-      } else NA_character_,
-      
-      attachment_type = if ("attachment_type" %in% names(events_with_ind))
-        str_c(unique(attachment_type[!is.na(attachment_type)]), collapse = " | ") else NA_character_,
-      
-      .groups = "drop"
-    ) |>
+                } else {
+                  1L  
+                  },
+              
+              # Timestamp columns: min / max if present
+              timestamp_first_deployed_location = if ("timestamp_first_deployed_location" %in% names(events_with_ind))
+                min(timestamp_first_deployed_location, na.rm = TRUE) else NA,
+              
+              timestamp_last_deployed_location = if ("timestamp_last_deployed_location" %in% names(events_with_ind))
+                max(timestamp_last_deployed_location, na.rm = TRUE) else NA,
+              
+              deploy_on_timestamp = if ("deploy_on_timestamp" %in% names(events_with_ind)) {
+                if (all(is.na(deploy_on_timestamp))) as.POSIXct(NA) 
+                else min(deploy_on_timestamp, na.rm = TRUE)
+                } else as.POSIXct(NA),
+              
+              deploy_off_timestamp = if ("deploy_off_timestamp" %in% names(events_with_ind)) {
+                if (all(is.na(deploy_off_timestamp))) as.POSIXct(NA) 
+                else max(deploy_off_timestamp, na.rm = TRUE)
+                } else as.POSIXct(NA),
+              
+              # Mortality location column: 1/0 if filled if present 
+              mortality_location_filled = if ("mortality_location_filled" %in% names(events_with_ind))
+                as.integer(any(mortality_location_filled >= 1, na.rm = TRUE)) else NA_integer_,
+              
+              # Categorical columns: collapsed unique if present
+              sex = if ("sex" %in% names(events_with_ind))
+                str_c(unique(sex[!is.na(sex)]), collapse = " | ") else NA_character_,
+              
+              mortality_type = if ("mortality_type" %in% names(events_with_ind)) {
+                str_c(unique(mortality_type[!is.na(mortality_type)]), collapse = " | ")
+                } else NA_character_,
+              
+              mortality_date = if ("mortality_date" %in% names(events_with_ind)) {
+                str_c(unique(mortality_date[!is.na(mortality_date)]), collapse = " | ")
+                } else NA_character_,
+              
+              death_comments = if ("death_comments" %in% names(events_with_ind))
+                str_c(unique(death_comments[!is.na(death_comments)]), collapse = " | ") 
+              else NA_character_,
+              
+              deployment_end_comments = if ("deployment_end_comments" %in% names(events_with_ind))
+                str_c(unique(deployment_end_comments[!is.na(deployment_end_comments)]), collapse = " | ") 
+              else NA_character_,
+              
+              deployment_end_type = if ("deployment_end_type" %in% names(events_with_ind))
+                str_c(unique(deployment_end_type[!is.na(deployment_end_type)]), collapse=" | ") 
+              else NA_character_,
+              
+              animal_life_stage = if ("animal_life_stage" %in% names(events_with_ind))
+                str_c(unique(animal_life_stage[!is.na(animal_life_stage)]), collapse = " | ")
+              else NA_character_,
+              
+              model = if ("model" %in% names(events_with_ind)) {
+                str_c(unique(model[!is.na(model)]), collapse = " | ")
+                } else NA_character_,
+              
+              attachment_type = if ("attachment_type" %in% names(events_with_ind))
+                str_c(unique(attachment_type[!is.na(attachment_type)]), collapse = " | ") 
+              else NA_character_,
+              
+              .groups = "drop") |>
+    
     mutate(
       
       # Clean empty strings (fill NA) for columns that exist
-      across(any_of(c(
-        "death_comments",
-        "mortality_type",
-        "mortality_date",
-        "deployment_end_comments",
-        "deployment_end_type",
-        "animal_birth_hatch_year")),
-        ~ if_else(. == "", NA_character_, .)),
-      
+      across(any_of(c("death_comments",
+                      "mortality_type",
+                      "mortality_date",
+                      "deployment_end_comments",
+                      "deployment_end_type",
+                      "animal_birth_hatch_year")),
+             ~ if_else(. == "", NA_character_, .)),
+        
       # Convert deploy timestamps 
       across(any_of(c("deploy_on_timestamp", "deploy_off_timestamp")), as.Date))
   
