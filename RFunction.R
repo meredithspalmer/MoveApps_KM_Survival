@@ -184,7 +184,7 @@ rFunction = function(data, sdk,
   
   ## Clean dates ---
   
-  # Start times 
+  # Start times  
   if(fix_na_start_times == "timestamp"){
     summary_table <- summary_table %>% 
       mutate(missing_timestamp_start = is.na(deploy_on_timestamp))
