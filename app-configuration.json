@@ -1,4 +1,14 @@
 {
-    "sdk": "MoveApps R Survival",
-    "year": 2026
+   "time_period_start" : "define",
+   "time_period_end" : "", 
+   "censor_capture_mortality" : "",
+   "fix_na_start_times" : "", 
+   "fix_na_end_times" : "",  
+   "subset_condition" : "",
+   "subset_condition_define" : "", 
+   "group_comparison_individual" : "",
+   "survival_yr_start" : "",
+   "animal_birth_hatch_year_table" : "", 
+   "life_table_days" : "", 
+   "calc_month_mort" : ""
 }

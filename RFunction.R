@@ -14,7 +14,7 @@ library(viridis)
 # logger.fatal(), logger.error(), logger.warn(), logger.info(), logger.debug(), logger.trace()
 
 # Survival Function 
-rFunction = function(data, sdk, 
+rFunction = function(data,  
                      time_period_start, 
                      time_period_end, 
                      censor_capture_mortality,
@@ -27,9 +27,6 @@ rFunction = function(data, sdk,
                      animal_birth_hatch_year_table, 
                      life_table_days, 
                      calc_month_mort) {
-  
-  logger.info(paste("Welcome to the", sdk))
-  
   
   ## Load auxiliary data ------------------------------------------------------ 
 
@@ -1102,12 +1099,13 @@ rFunction = function(data, sdk,
                          expand       = expansion(mult = c(0.01, 0.03)),
                          limits       = if (has_time_filter) c(t_start, t_end) else NULL)
     
-    # ** want to figure out how to add width, height, units, dpi, bg to artifact **
-    artifact <- appArtifactPath("tracking_history.png")
-    logger.info(paste("Saving tracking history plot:", artifact))
-    png(artifact)
-    tracking_history
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("tracking_history.png"), 
+           plot = tracking_history, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+
     
     # Calculate monthly mortality
     if(calc_month_mort == TRUE){
@@ -1161,12 +1159,12 @@ rFunction = function(data, sdk,
               axis.text.x       = element_text(size = 11, face = "bold"),
               axis.text.y       = element_text(size = 11))
       
-      # want to figure out how to add width, height, units, dpi, bg to artifact 
-      artifact <- appArtifactPath("monthly_mortality.png")
-      logger.info(paste("Saving monthly mortality plot:", artifact))
-      png(artifact)
-      monthly_mort_plot
-      dev.off()
+      # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+      ggsave(filename = appArtifactPath("monthly_mortality.png"), 
+             plot = monthly_mort_plot, 
+             width = 10, height = 6, units = "in",
+             dpi = 300, 
+             bg = "white")
       }
     
   } else {
@@ -1239,12 +1237,13 @@ rFunction = function(data, sdk,
                        date_labels = "%Y",
                        expand      = expansion(mult = c(0.01, 0.03)))
     
-    # ** want to figure out how to add width, height, units, dpi, bg to artifact **
-    artifact <- appArtifactPath("tracking_history.png")
-    logger.info(paste("Saving tracking history plot:", artifact))
-    png(artifact)
-    tracking_history
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("tracking_history.png"), 
+           plot = tracking_history, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+    
 
     # Calculate monthly mortality 
     if(calc_month_mort == TRUE){
@@ -1293,12 +1292,12 @@ rFunction = function(data, sdk,
               axis.text.x      = element_text(size = 11, face = "bold"),
               axis.text.y      = element_text(size = 11))
       
-      # want to figure out how to add width, height, units, dpi, bg to artifact 
-      artifact <- appArtifactPath("monthly_mortality.png")
-      logger.info(paste("Saving monthly mortality plot:", artifact))
-      png(artifact)
-      monthly_mort_plot
-      dev.off()
+      # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+      ggsave(filename = appArtifactPath("monthly_mortality.png"), 
+             plot = monthly_mort_plot, 
+             width = 10, height = 6, units = "in",
+             dpi = 300, 
+             bg = "white")
     }
   }
     
@@ -1326,7 +1325,7 @@ rFunction = function(data, sdk,
                              upper_95         = s$upper)
     
     # **unsure if the row.names will cause issues - double check 
-    write.csv(life_table, file = appArtifactPath("life_table.csv", row.names = F))
+    write.csv(life_table, file = appArtifactPath("life_table.csv"), row.names = F)
     
     # Plot KM curve ---
     n.ind <- nrow(summary_table)
@@ -1359,12 +1358,13 @@ rFunction = function(data, sdk,
               line               = element_line(linewidth = 0.1),
               plot.margin        = margin(10, 10, 10, 10)))
     
-    # **want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("km_survival_curve.png")
-    logger.info(paste("Saving Kaplan-Meier survival curve plot:", artifact))
-    png(artifact)
-    km_curve
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("km_survival_curve.png"), 
+           plot = km_curve, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+    
     
     # Plot cumulative hazard curve --- 
     cum_hazard <- ggsurvplot(
@@ -1388,12 +1388,13 @@ rFunction = function(data, sdk,
               panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
               plot.margin  = margin(10, 10, 10, 10)))
     
-    # **want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("cumulative_hazard_plot.png")
-    logger.info(paste("Saving cumulative hazard plot:", artifact))
-    png(artifact)
-    cum_hazard
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("cumulative_hazard_plot.png"), 
+           plot = cum_hazard, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+
   } 
   
   # Can also produce a single KM curve if data subset to single survival year 
@@ -1416,8 +1417,9 @@ rFunction = function(data, sdk,
                              lower_95      = s$lower,
                              upper_95      = s$upper)
     
-    # **unsure if the row.names will cause issues - double check 
-    write.csv(life_table, file = appArtifactPath("life_table.csv", row.names = F))
+    # Save
+    write.csv(life_table, file = appArtifactPath("life_table.csv"), row.names = F)
+    
     
     # Plot KM curve ---
     
@@ -1468,12 +1470,13 @@ rFunction = function(data, sdk,
               panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
               plot.margin        = margin(10, 10, 10, 10)))
     
-    # **want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("km_survival_curve.png")
-    logger.info(paste("Saving Kaplan-Meier survival curve plot:", artifact))
-    png(artifact)
-    km_curve
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("km_survival_curve.png"), 
+           plot = km_curve, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+  
     
     # Plot cumulative hazard curve --- 
     cum_hazard <- ggsurvplot(
@@ -1497,12 +1500,12 @@ rFunction = function(data, sdk,
               panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
               plot.margin  = margin(10, 10, 10, 10)))
     
-    # **want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("cumulative_hazard_plot.png")
-    logger.info(paste("Saving cumulative hazard plot:", artifact))
-    png(artifact)
-    cum_hazard
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("cumulative_hazard_plot.png"), 
+           plot = cum_hazard, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
   }
   
   
@@ -1516,6 +1519,7 @@ rFunction = function(data, sdk,
     # Fit survival object ---
     surv_formula <- Surv(days_at_risk, mortality_event) ~ survival_year
     km_fit_comp <- survfit(surv_formula, data = yearly_survival)
+    
     
     # Log-Rank test --- 
     test <- survdiff(surv_formula, data=yearly_survival)
@@ -1549,8 +1553,8 @@ rFunction = function(data, sdk,
       select(`Reproductive condition`, `N (events)`, `Expected events`, `O/E ratio`,
              `Chisq (log-rank)`, df, `p-value`)
     
-    # **double check that adding row.names = F doesn't cause issues 
-    write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv", row.names = F))
+    # Save
+    write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv"), row.names = F)
     
     
     # KM comparison plots ---
@@ -1594,12 +1598,13 @@ rFunction = function(data, sdk,
                                     panel.border = element_rect(color="black", fill=NA, linewidth = 0.5),
                                     plot.margin  = margin(10, 10, 10, 10)))
     
-    # want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("km_comparison_curves_survivalyear.png")
-    logger.info(paste("Saving KM comparison curves (survival year):", artifact))
-    png(artifact)
-    km_comp_curve
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("km_comparison_curves_survivalyear.png"), 
+           plot = km_comp_curve, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+  
     
     ## Cumulative hazard comparison plots ---
     
@@ -1640,12 +1645,12 @@ rFunction = function(data, sdk,
                                           legend.text   = element_text(size = 10)))
   }
   
-  # want to figure out how to add width, height, units, dpi, bg to artifact 
-  artifact <- appArtifactPath("cum_hazard_comparison_plot_survivalyear.png")
-  logger.info(paste("Saving cumulative hazard comparison plots (survival year):", artifact))
-  png(artifact)
-  cum_hazard_comp
-  dev.off()
+  # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+  ggsave(filename = appArtifactPath("cum_hazard_comparison_plot_survivalyear.png"), 
+         plot = cum_hazard_comp, 
+         width = 10, height = 6, units = "in",
+         dpi = 300, 
+         bg = "white")
     
   } else {
     logger.info("Grouping by: ", group_comparison_individual)
@@ -1655,6 +1660,7 @@ rFunction = function(data, sdk,
     formula_str <- paste("Surv(time_at_risk, mortality_event) ~", group_comparison_individual)
     surv_formula <- as.formula(formula_str)
     km_fit_comp <- survfit(surv_formula, data = summary_table)
+    
     
     # Log-Rank test --- 
     test <- survdiff(surv_formula, data=summary_table)
@@ -1701,8 +1707,9 @@ rFunction = function(data, sdk,
                     df,
                     `p-value`)
     
-    # double check that adding row.names = F doesn't cause issues 
-    write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv", row.names = F))
+    # Save
+    write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv"), row.names = F)
+    
     
     # KM comparison plots ---
     km_fit_comp <- surv_fit(surv_formula, data = summary_table)  # use surv_fit instead of survfit
@@ -1753,12 +1760,13 @@ rFunction = function(data, sdk,
                                      panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
                                      plot.margin  = margin(10, 10, 10, 10)))
     
-    # want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("km_comparison_curves.png")
-    logger.info(paste("Saving KM comparison curves:", artifact))
-    png(artifact)
-    km_comp_curve
-    dev.off()
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("km_comparison_curves.png"), 
+           plot = km_comp_curve, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+    
     
     ## Cumulative hazard comparison plots ---
     
@@ -1811,13 +1819,12 @@ rFunction = function(data, sdk,
                                           legend.title  = element_text(size = 11),
                                           legend.text   = element_text(size = 10)))
     
-    # want to figure out how to add width, height, units, dpi, bg to artifact 
-    artifact <- appArtifactPath("cum_hazard_comparison_plot.png")
-    logger.info(paste("Saving cumulative hazard comparison plots:", artifact))
-    png(artifact)
-    cum_hazard_comp
-    dev.off()
-    
+    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    ggsave(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
+           plot = cum_hazard_comp, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
   }
   
   # Pass original to the next app in the MoveApps workflow
