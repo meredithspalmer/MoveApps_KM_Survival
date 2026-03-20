@@ -657,15 +657,15 @@ rFunction = function(data, sdk,
   
   ## Subset based on condition (if selected) ----------------------------------
   
-  if (subset_condition == "sex") {
+  if (!is.null(subset_condition) && subset_condition == "sex") {
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(sex == subset_condition_define)
     } else {
       yearly_survival <- yearly_survival %>% filter(sex == subset_condition_define)
     }
-  } 
+  }
   
-  if (subset_condition == "attachment_type") {
+  if (!is.null(subset_condition) && subset_condition == "attachment_type") {
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(attachment_type == subset_condition_define)
     } else {
@@ -673,7 +673,7 @@ rFunction = function(data, sdk,
     }
   } 
   
-  if (subset_condition == "model") {
+  if (!is.null(subset_condition) && subset_condition == "model") {
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(model == subset_condition_define) 
     } else {
@@ -681,7 +681,7 @@ rFunction = function(data, sdk,
     }
   } 
   
-  if (subset_condition == "lifestage") {
+  if (!is.null(subset_condition) && subset_condition == "lifestage") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
@@ -690,7 +690,7 @@ rFunction = function(data, sdk,
     }
   } 
   
-  if (subset_condition == "survival_year") {
+  if (!is.null(subset_condition) && subset_condition == "survival_year") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
@@ -710,7 +710,7 @@ rFunction = function(data, sdk,
     
   ## Clean user-defined grouping attributes (if selected) ---------------------
   
-  if(group_comparsion_individual == "sex"){
+  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "sex"){
     
     if(is.null(survival_yr_start)){
       
@@ -774,7 +774,7 @@ rFunction = function(data, sdk,
     }
   }
   
-  if(group_comparsion_individual == "lifestage"){
+  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "lifestage"){
     
     if(is.null(survival_yr_start)){ 
       logger.error("This comparison only makes sense if survival years are defined.")
@@ -811,7 +811,7 @@ rFunction = function(data, sdk,
     }
   }
   
-  if(group_comparsion_individual == "model"){
+  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "model"){
     
     if(is.null(survival_yr_start)){
       
@@ -885,7 +885,7 @@ rFunction = function(data, sdk,
     } 
   }
   
-  if(group_comparsion_individual == "attachment"){
+  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "attachment"){
     
     if(is.null(survival_yr_start)){
       
@@ -959,7 +959,7 @@ rFunction = function(data, sdk,
     } 
   }
   
-  if(group_comparsion_individual == "survYear"){
+  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "survYear"){
     
     if(is.null(survival_yr_start)){ 
       logger.error("This comparison only makes sense if survival years are defined.")
@@ -1015,7 +1015,7 @@ rFunction = function(data, sdk,
              duration_days  = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
       filter(deploy_off > deploy_on, !is.na(deploy_on), !is.na(deploy_off))
     
-    has_time_filter <- !is.na(time_period_start) || !is.na(time_period_end)
+    has_time_filter <- !is.null(time_period_start) || !is.null(time_period_end)
     
     if (has_time_filter) {
       t_start <- if (!is.na(time_period_start)) as.POSIXct(time_period_start) else min(deployment_summary$deploy_on, na.rm = TRUE)
