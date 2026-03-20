@@ -306,20 +306,20 @@ rFunction = function(data, sdk,
   summary_table <- summary_table %>% mutate(raw_deploy_off_timestamp = deploy_off_timestamp) 
   
   # Define window 
-  effective_start <- if (is.na(time_period_start)) {
+  effective_start <- if (is.null(time_period_start)) {
     min(summary_table$deploy_on_timestamp, na.rm = TRUE)
     } else {
       time_period_start
     }
   
-  effective_end <- if (is.na(time_period_end)) {
+  effective_end <- if (is.null(time_period_end)) {
     max(summary_table$deploy_off_timestamp, na.rm = TRUE)
     } else {
       time_period_end
     }  
   
   # Run updates 
-  if(!is.na(time_period_start) | !is.na(time_period_end)){
+  if(!is.null(time_period_start) | !is.null(time_period_end)){
     
     # Crop to window 
     n_original <- nrow(summary_table) 
@@ -347,9 +347,11 @@ rFunction = function(data, sdk,
   
   
   ## Calculate entry time and exit time (for staggered entry) ---
-  origin_date <- if_else(is.na(time_period_start),
-                         min(summary_table$deploy_on_timestamp, na.rm = TRUE),
-                         time_period_start)
+  origin_date <- if (is.null(time_period_start) || is.na(time_period_start)) {
+    min(summary_table$deploy_on_timestamp, na.rm = TRUE)
+  } else {
+    time_period_start
+  }
   
   summary_table <- summary_table %>%
     mutate(analysis_entry_date = pmax(deploy_on_timestamp, effective_start, na.rm = TRUE),
