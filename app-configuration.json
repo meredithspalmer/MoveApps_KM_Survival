@@ -1,14 +1,16 @@
 {
-   "time_period_start" : "define",
-   "time_period_end" : "", 
-   "censor_capture_mortality" : "",
-   "fix_na_start_times" : "", 
-   "fix_na_end_times" : "",  
-   "subset_condition" : "",
-   "subset_condition_define" : "", 
-   "group_comparison_individual" : "",
-   "survival_yr_start" : "",
-   "animal_birth_hatch_year_table" : "", 
-   "life_table_days" : "", 
-   "calc_month_mort" : ""
+   "time_period_start"             : null,
+   "time_period_end".              : null, 
+   "censor_capture_mortality"      : 2, #integer or character? 
+   "fix_na_start_times"            : "timestamp", 
+   "fix_na_end_times"              : "timestamp",  
+   "subset_condition_1"            : "sex",
+   "subset_condition_define_1"     : "f", 
+   "subset_condition_2"            : "sex",
+   "subset_condition_define_2"     : "f", 
+   "group_comparison_individual"   : "model",
+   "survival_yr_start"             : "2016-06-01",   AS DATE 
+   "animal_birth_hatch_year_table" : null, 
+   "life_table_days"               : 30, #integer or character? 
+   "calc_month_mort"               : false
 }

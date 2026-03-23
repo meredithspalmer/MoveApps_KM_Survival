@@ -61,9 +61,9 @@
       "type": "INTEGER"
     }, 
     {
-      "id": "subset_condition",
+      "id": "subset_condition_1",
       "name": "Perform analysis on subset of data",
-      "description": "If interested in performing analyses on a subset of the data, select the variable to subset by below. You will define the group of interest within this subset in the next step. Note: if using a survival year or life stage filter, be sure to enter survival year start dates in the following filters. For life stage, you will additionally need to add auxiliary life stage information (template csv files can be found on this app's GitHub page).",
+      "description": "If interested in performing analyses on a subset of the data, select the variable to subset by below. You will define the group of interest within this subset in the next step. Note: if using a survival year or life stage filter, be sure to enter survival year start dates in the following filters. For life stage, your data will neect to contain the column `animal_birth_hatch_year` and you will additionally need to add auxiliary life stage information (template csv files can be found on this app's GitHub page).",
       "defaultValue": null,
       "type": "DROPDOWN",
       "options": [
@@ -94,9 +94,49 @@
       ]
     }, 
     {
-      "id": "subset_condition_define",
+      "id": "subset_condition_define_1",
       "name": "Define your subsetting condition",
-      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals).",
+      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year as an integer (i.e., `3' for the 3rd survival year in your dataset). For other parameters, you will need the exact spelling,  capitalization, and/or formatting as your desired subset variable.",
+      "defaultValue": null,
+      "type": "STRING"
+    },
+    {
+      "id": "subset_condition_2",
+      "name": "Perform analysis on a further subset of data",
+      "description": "If interested in performing analyses on a further subset of the data, select the variable to subset by below. You will define the group of interest within this subset in the next step. Note: if using a survival year or life stage filter, be sure to enter survival year start dates in the following filters. For life stage, your data will neect to contain the column `animal_birth_hatch_year` and you will additionally need to add auxiliary life stage information (template csv files can be found on this app's GitHub page).",
+      "defaultValue": null,
+      "type": "DROPDOWN",
+      "options": [
+        {
+          "value": null,
+          "displayText": "All remaining data included"
+        },
+        {
+          "value": "sex",
+          "displayText": "Subset by sex (m/f/u)"
+        }, 
+        {
+          "value": "lifestage",
+          "displayText": "Subset by lifestage (user-defined)"
+        }, 
+        {
+          "value": "survival_year",
+          "displayText": "Subset by survival year (user-defined)"
+        },
+        {
+          "value": "attachment_type",
+          "displayText": "Subset by attachment type (user-defined)"
+        },
+        {
+          "value": "model",
+          "displayText": "Subset by tag model (user-defined)"
+        }
+      ]
+    }, 
+    {
+      "id": "subset_condition_define_2",
+      "name": "Define your second subsetting condition",
+      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year as an integer (i.e., `3' for the 3rd survival year in your dataset). For other parameters, you will need the exact spelling,  capitalization, and/or formatting as your desired subset variable.",
       "defaultValue": null,
       "type": "STRING"
     },

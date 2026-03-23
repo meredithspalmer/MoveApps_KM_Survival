@@ -20,8 +20,10 @@ rFunction = function(data,
                      censor_capture_mortality,
                      fix_na_start_times, 
                      fix_na_end_times,  
-                     subset_condition,
-                     subset_condition_define, 
+                     subset_condition_1,
+                     subset_condition_define_1, 
+                     subset_condition_2,
+                     subset_condition_define_2, 
                      group_comparison_individual,
                      survival_yr_start,
                      animal_birth_hatch_year_table, 
@@ -32,6 +34,13 @@ rFunction = function(data,
 
   if(!is.null(animal_birth_hatch_year_table)){
     animal_birth_hatch_year_table <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year_table"))
+  }
+  
+  
+  ## Functions for saving plots -----------------------------------------------
+  
+  grid.draw.ggsurvplot <- function(x) {
+    survminer:::print.ggsurvplot(x, newpage = FALSE)
   }
   
   
@@ -620,6 +629,11 @@ rFunction = function(data,
   
   if(!is.null(survival_yr_start) && !is.null(animal_birth_hatch_year_table)){
     
+    # Confirm data exists 
+    if (!"animal_birth_hatch_year" %in% names(yearly_survival)) {
+      logger.error("Column 'animal_birth_hatch_year' does not exist in the data frame. Cannot compute life stage.")
+    }
+    
     # Calculate age and age_class
     yearly_survival <- yearly_survival %>%
       mutate(age       = survival_year - animal_birth_hatch_year,
@@ -654,53 +668,112 @@ rFunction = function(data,
   
   ## Subset based on condition (if selected) ----------------------------------
   
-  if (!is.null(subset_condition) && subset_condition == "sex") {
+  if(subset_condition_1 == subset_condition_2) {
+    logger.warn("Both subsetting conditions are the same.")
+  }
+  
+  # SUBSET CONDITION 1 ---
+  
+  if (!is.null(subset_condition_1) && subset_condition_1 == "sex") {
     if (is.null(survival_yr_start)) {
-      summary_table <- summary_table %>% filter(sex == subset_condition_define)
+      summary_table <- summary_table %>% filter(sex == subset_condition_define_1)
     } else {
-      yearly_survival <- yearly_survival %>% filter(sex == subset_condition_define)
+      yearly_survival <- yearly_survival %>% filter(sex == subset_condition_define_1)
     }
   }
   
-  if (!is.null(subset_condition) && subset_condition == "attachment_type") {
+  if (!is.null(subset_condition_1) && subset_condition_1 == "attachment_type") {
     if (is.null(survival_yr_start)) {
-      summary_table <- summary_table %>% filter(attachment_type == subset_condition_define)
+      summary_table <- summary_table %>% filter(attachment_type == subset_condition_define_1)
     } else {
-      yearly_survival <- yearly_survival %>% filter(attachment_type == subset_condition_define)
+      yearly_survival <- yearly_survival %>% filter(attachment_type == subset_condition_define_1)
     }
   } 
   
-  if (!is.null(subset_condition) && subset_condition == "model") {
+  if (!is.null(subset_condition_1) && subset_condition_1 == "model") {
     if (is.null(survival_yr_start)) {
-      summary_table <- summary_table %>% filter(model == subset_condition_define) 
+      summary_table <- summary_table %>% filter(model == subset_condition_define_1) 
     } else {
-      yearly_survival <- yearly_survival %>% filter(model == as.integer(subset_condition_define))
+      yearly_survival <- yearly_survival %>% filter(model == as.integer(subset_condition_define_1))
     }
   } 
   
-  if (!is.null(subset_condition) && subset_condition == "lifestage") {
+  if (!is.null(subset_condition_1) && subset_condition_1 == "lifestage") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
     } else {
-      yearly_survival <- yearly_survival %>% filter(animal_life_stage_new == subset_condition_define)
+      yearly_survival <- yearly_survival %>% filter(animal_life_stage_new == subset_condition_define_1)
     }
   } 
   
-  if (!is.null(subset_condition) && subset_condition == "survival_year") {
+  if (!is.null(subset_condition_1) && subset_condition_1 == "survival_year") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
     } else {
-      yearly_survival <- yearly_survival %>% filter(survival_year == as.integer(subset_condition_define))
+      yearly_survival <- yearly_survival %>% filter(survival_year == as.integer(subset_condition_define_1))
     }
   }
   
-  if(!is.null(subset_condition)){
+  if(!is.null(subset_condition_1)){
     if(is.null(survival_yr_start) && nrow(summary_table) == 0){
-      logger.fatal("There are no individuals meeting the subsetting condition.")
+      logger.fatal("There are no individuals meeting the first subsetting condition.")
     } else if(!is.null(survival_yr_start) && nrow(yearly_survival) == 0){
-      logger.fatal("There are no individuals meeting the subsetting condition.")
+      logger.fatal("There are no individuals meeting the first subsetting condition.")
+    }
+  }
+  
+  
+  # SUBSET CONDITION 2 ---
+  
+  if (!is.null(subset_condition_2) && subset_condition_2 == "sex") {
+    if (is.null(survival_yr_start)) {
+      summary_table <- summary_table %>% filter(sex == subset_condition_define_2)
+    } else {
+      yearly_survival <- yearly_survival %>% filter(sex == subset_condition_define_2)
+    }
+  }
+  
+  if (!is.null(subset_condition_2) && subset_condition_2 == "attachment_type") {
+    if (is.null(survival_yr_start)) {
+      summary_table <- summary_table %>% filter(attachment_type == subset_condition_define_2)
+    } else {
+      yearly_survival <- yearly_survival %>% filter(attachment_type == subset_condition_define_2)
+    }
+  } 
+  
+  if (!is.null(subset_condition_2) && subset_condition_2 == "model") {
+    if (is.null(survival_yr_start)) {
+      summary_table <- summary_table %>% filter(model == subset_condition_define_2) 
+    } else {
+      yearly_survival <- yearly_survival %>% filter(model == as.integer(subset_condition_define_2))
+    }
+  } 
+  
+  if (!is.null(subset_condition_2) && subset_condition_2 == "lifestage") {
+    if (is.null(survival_yr_start)) {
+      logger.error("This subset only makes sense when data are processed by survival year. 
+                   Please enter survival year start date.")
+    } else {
+      yearly_survival <- yearly_survival %>% filter(animal_life_stage_new == subset_condition_define_2)
+    }
+  } 
+  
+  if (!is.null(subset_condition_2) && subset_condition_2 == "survival_year") {
+    if (is.null(survival_yr_start)) {
+      logger.error("This subset only makes sense when data are processed by survival year. 
+                   Please enter survival year start date.")
+    } else {
+      yearly_survival <- yearly_survival %>% filter(survival_year == as.integer(subset_condition_define_2))
+    }
+  }
+  
+  if(!is.null(subset_condition_2)){
+    if(is.null(survival_yr_start) && nrow(summary_table) == 0){
+      logger.fatal("There are no individuals meeting the both subsetting conditions.")
+    } else if(!is.null(survival_yr_start) && nrow(yearly_survival) == 0){
+      logger.fatal("There are no individuals meeting the both subsetting conditions.")
     }
   }
 
@@ -1099,10 +1172,15 @@ rFunction = function(data,
                          expand       = expansion(mult = c(0.01, 0.03)),
                          limits       = if (has_time_filter) c(t_start, t_end) else NULL)
     
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    # Save plot 
+    plot_height <- length(unique(yearly_survival$individual_id)) / 7
+    plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
+    
     ggsave(filename = appArtifactPath("tracking_history.png"), 
            plot = tracking_history, 
-           width = 10, height = 6, units = "in",
+           width = plot_width, 
+           height = plot_height,
+           units = "in",
            dpi = 300, 
            bg = "white")
 
@@ -1159,7 +1237,7 @@ rFunction = function(data,
               axis.text.x       = element_text(size = 11, face = "bold"),
               axis.text.y       = element_text(size = 11))
       
-      # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+      # Save plot  
       ggsave(filename = appArtifactPath("monthly_mortality.png"), 
              plot = monthly_mort_plot, 
              width = 10, height = 6, units = "in",
@@ -1237,10 +1315,15 @@ rFunction = function(data,
                        date_labels = "%Y",
                        expand      = expansion(mult = c(0.01, 0.03)))
     
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    # Save plot 
+    plot_height <- length(unique(yearly_survival$individual_id)) / 7
+    plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
+     
     ggsave(filename = appArtifactPath("tracking_history.png"), 
            plot = tracking_history, 
-           width = 10, height = 6, units = "in",
+           width = plot_width, 
+           height = plot_height, 
+           units = "in",
            dpi = 300, 
            bg = "white")
     
@@ -1292,7 +1375,7 @@ rFunction = function(data,
               axis.text.x      = element_text(size = 11, face = "bold"),
               axis.text.y      = element_text(size = 11))
       
-      # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+      # Save plot  
       ggsave(filename = appArtifactPath("monthly_mortality.png"), 
              plot = monthly_mort_plot, 
              width = 10, height = 6, units = "in",
@@ -1514,7 +1597,7 @@ rFunction = function(data,
   if (is.null(group_comparison_individual)) {
     # do nothing 
     
-  } else if (group_comparison_individual == "survYear") {
+  } else if (!is.null(group_comparison_individual) && group_comparison_individual == "survYear") {
   
     # Fit survival object ---
     surv_formula <- Surv(days_at_risk, mortality_event) ~ survival_year
@@ -1698,6 +1781,7 @@ rFunction = function(data,
                           `df`                     = df_val,
                           `p-value`                = p_formatted)
     
+    logrank_table <- bind_rows(per_group, summary_row)
     logrank_table <- logrank_table %>%
       dplyr::select(any_of(grouping_var), 
                     `N (events)`,
@@ -1718,7 +1802,7 @@ rFunction = function(data,
     title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
     
     group_rows <- logrank_table %>% filter(!!sym(grouping_var) != "Overall")
-    subtitle_text <- paste0(paste(sprintf("N(%s): %s", 
+    subtitle_text <- paste0(paste(sprintf("N_%s: %s", 
                                           group_rows[[grouping_var]],
                                           group_rows$`N (events)`),
                                   collapse = ", "),
@@ -1737,7 +1821,7 @@ rFunction = function(data,
                                  data = summary_table,
                                  title = title_text,
                                  subtitle = subtitle_text,
-                                 #conf.int = TRUE,
+                                 conf.int = TRUE,
                                  #conf.in.style = "step",
                                  risk.table = FALSE,
                                  #surv.median.line = "hv",
@@ -1780,7 +1864,7 @@ rFunction = function(data,
     
     # Create one-line subtitle for groups: "N(Group): N (events)"
     subtitle_parts <- mapply(function(group, n, ev) {
-      sprintf("N(%s): %d (%d)", group, n, ev)
+      sprintf("N_%s: %d(%d)", group, n, ev)
     },
     clean_strata, n_per_group, events_per_group, SIMPLIFY = FALSE)
     

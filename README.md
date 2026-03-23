@@ -83,7 +83,7 @@ Note that a larger sample size is required for comparison across groups.
 
 **Survival years**: Users can define a "survival year" for analyses, different from a calendar year in that this period extends from when an animal is typically born to the end of their first year, etc.  
 
-**Life stages**: Users can upload auxiliary information (see template: https://github.com/meredithspalmer/MoveApps_Survival/blob/master/animal_birth_hatch_year_table.csv) that links individual animal ages to species-specific life stages. 
+**Life stages**: If the user wants to calculate life stage, the input data must contain the column "animal_birth_hatch_year". Users must also upload auxiliary information (see template: https://github.com/meredithspalmer/MoveApps_Survival/blob/master/animal_birth_hatch_year_table.csv) that links individual animal ages to species-specific life stages. 
 
 
 ### Input type
