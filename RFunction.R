@@ -465,7 +465,7 @@ rFunction = function(data,
   
   # Produce warning: Small proportion of deaths 
   if (n_mort_events <= 10) {
-    logger.warn(sprintf("Few (%d) deaths detected. Model may have low statistical power, potentially resulting in unreliable estimates and poor predictive power.", n_mort_events),
+    logger.warn(sprintf("Few (%d) deaths detected across entire dataset. Particularly if data is further subset, model may have low statistical power. This could potentially result in unreliable estimates and poor predictive capacity", n_mort_events),
             call. = FALSE, immediate. = TRUE)
   }
   
@@ -780,7 +780,7 @@ rFunction = function(data,
     
   ## Clean user-defined grouping attributes (if selected) ---------------------
   
-  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "sex"){
+  if(!is.null(group_comparison_individual) && group_comparison_individual == "sex"){
     
     if(is.null(survival_yr_start)){
       
@@ -844,7 +844,7 @@ rFunction = function(data,
     }
   }
   
-  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "lifestage"){
+  if(!is.null(group_comparison_individual) && group_comparison_individual == "lifestage"){
     
     if(is.null(survival_yr_start)){ 
       logger.error("This comparison only makes sense if survival years are defined.")
@@ -881,7 +881,7 @@ rFunction = function(data,
     }
   }
   
-  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "model"){
+  if(!is.null(group_comparison_individual) && group_comparison_individual == "model"){
     
     if(is.null(survival_yr_start)){
       
@@ -955,7 +955,7 @@ rFunction = function(data,
     } 
   }
   
-  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "attachment"){
+  if(!is.null(group_comparison_individual) && group_comparison_individual == "attachment"){
     
     if(is.null(survival_yr_start)){
       
@@ -1029,7 +1029,7 @@ rFunction = function(data,
     } 
   }
   
-  if(!is.null(group_comparsion_individual) && group_comparsion_individual == "survYear"){
+  if(!is.null(group_comparison_individual) && group_comparison_individual == "survYear"){
     
     if(is.null(survival_yr_start)){ 
       logger.error("This comparison only makes sense if survival years are defined.")
@@ -1480,8 +1480,10 @@ rFunction = function(data,
 
   } 
   
-  # Can also produce a single KM curve if data subset to single survival year 
-  if(!is.null(survival_yr_start) && subset_condition == "survival_year"){
+  # Can also produce a single KM curve if data subset to single survival year or lifestage
+  if (!is.null(survival_yr_start) && 
+      (subset_condition_1 == "survival_year" || subset_condition_2 == "survival_year" ||
+       subset_condition_1 == "lifestage" || subset_condition_2 == "lifestage")){
     
     # Fit KM ---
     km_fit <- survfit(Surv(days_at_risk, mortality_event) ~ 1, data = yearly_survival)
@@ -1532,7 +1534,7 @@ rFunction = function(data,
     km_curve <- ggsurvplot(
       km_fit,
       data = yearly_survival,
-      title = paste0("Kaplan-Meier Survival Curve: Survival Year ", subset_condition_define),
+      title = paste0("Kaplan-Meier Survival Curve: ", subset_condition_define_1, " & ", subset_condition_define_2),
       subtitle = sprintf("n = %d intervals • %d deaths • %d censored • median = %s",
                          n_ind, n_events, n_censored, median_label),
       xlab = "Time (days)",
@@ -1553,7 +1555,7 @@ rFunction = function(data,
               panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
               plot.margin        = margin(10, 10, 10, 10)))
     
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    # Save plot 
     ggsave(filename = appArtifactPath("km_survival_curve.png"), 
            plot = km_curve, 
            width = 10, height = 6, units = "in",
@@ -1571,7 +1573,7 @@ rFunction = function(data,
       pval = FALSE,                     
       xlab = "Time (days)",
       ylab = "Cumulative Hazard",
-      title = paste0("Cumulative Hazard: Survival Year ", subset_condition_define),
+      title = paste0("Cumulative Hazard Curve: ", subset_condition_define_1, " & ", subset_condition_define_2),
       subtitle = paste0("N = ", n.ind, ", Events = ", n_events),  
       palette = c("#E69F00", "#56B4E9"),
       legend = "none",
@@ -1583,7 +1585,7 @@ rFunction = function(data,
               panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
               plot.margin  = margin(10, 10, 10, 10)))
     
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    # Save plot 
     ggsave(filename = appArtifactPath("cumulative_hazard_plot.png"), 
            plot = cum_hazard, 
            width = 10, height = 6, units = "in",
@@ -1597,12 +1599,11 @@ rFunction = function(data,
   if (is.null(group_comparison_individual)) {
     # do nothing 
     
-  } else if (!is.null(group_comparison_individual) && group_comparison_individual == "survYear") {
-  
-    # Fit survival object ---
-    surv_formula <- Surv(days_at_risk, mortality_event) ~ survival_year
-    km_fit_comp <- survfit(surv_formula, data = yearly_survival)
+  } else if (!is.null(group_comparison_individual) && !is.null(survival_yr_start)){
     
+    # Fit survival object 
+    surv_formula <- as.formula(paste("Surv(days_at_risk, mortality_event) ~", group_comparison_individual))
+    km_fit_comp <- survfit(surv_formula, data = yearly_survival) 
     
     # Log-Rank test --- 
     test <- survdiff(surv_formula, data=yearly_survival)
@@ -1617,15 +1618,14 @@ rFunction = function(data,
     p_formatted  <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
     
     # Summary table 
-    per_group <- tibble(`Reproductive condition` = sub(".*=", "", groups),    
+    per_group <- tibble(!!grouping_var   := sub(".*=", "", groups),
                         `N`                      = test$n,
                         `Events`                 = test$obs,
                         `Expected events`        = round(test$exp, 2),
                         `O/E ratio`              = round(test$obs / test$exp, 2)) %>%
-      mutate(`N (events)` = sprintf("%d (%d)", N, Events),
-             .keep = "unused")
+      mutate(`N (events)` = sprintf("%d (%d)", N, Events), .keep = "unused")
     
-    summary_row <- tibble(`Reproductive condition` = "Overall",
+    summary_row <- tibble(!!grouping_var          := "Overall",
                           `N (events)`             = sprintf("%d (%d)", n_total, events_total),
                           `Chisq (log-rank)`       = chisq_val,
                           `df`                     = df_val,
@@ -1633,8 +1633,8 @@ rFunction = function(data,
     
     logrank_table <- bind_rows(per_group, summary_row)
     logrank_table <- logrank_table %>%
-      select(`Reproductive condition`, `N (events)`, `Expected events`, `O/E ratio`,
-             `Chisq (log-rank)`, df, `p-value`)
+      dplyr::select(any_of(grouping_var), `N (events)`, `Expected events`, `O/E ratio`,
+                    `Chisq (log-rank)`, df, `p-value`)
     
     # Save
     write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv"), row.names = F)
@@ -1643,31 +1643,70 @@ rFunction = function(data,
     # KM comparison plots ---
     km_fit_comp <- surv_fit(surv_formula, data = yearly_survival)  
     
-    title_text <- paste0("Kaplan-Meier Survival Curve: Survival year")
-    subtitle_text <- paste0("N: ", n_total, "(", events_total, "); Chisq: ", round(test$chisq, 3), "; P-value: ", round(test$pvalue, 3))
+    # Check if any groups have N == 1 and remove 
+    filter_singleton_strata_refit <- function(fit, data) {
+      
+      grouping_var <- all.vars(formula(fit))[3]    
+      n_per_group <- fit$n
+      group_names <- sub(".*=", "", names(fit$strata) %||% "Overall")
+      
+      singletons <- n_per_group == 1
+      removed <- group_names[singletons]   
+      
+      if (any(singletons)) {
+        logger.info(paste("Removed the following singleton group(s) (N=1):\n",
+                          paste(" •", removed, collapse = "\n ")), call. = FALSE)
+        
+        # Filter data using clean group names
+        data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
+        
+        # Refit 
+        km_clean <- surv_fit(formula(fit), data = data_clean)
+        return(km_clean)
+      }
+      return(fit)
+    }
     
-    old_strata_names <- names(km_fit_comp$strata)
+    km_fit_clean <- filter_singleton_strata_refit(km_fit_comp, yearly_survival)
+    
+    title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
+    group_rows <- logrank_table %>% filter(!!sym(grouping_var) != "Overall") 
+    group_rows_clean <- group_rows %>% filter(!str_detect(`N (events)`, "^1\\s*\\("))
+    removed_groups <- group_rows %>% filter(str_detect(`N (events)`, "^1\\s*\\(")) %>%
+      pull(1)
+    
+    if (length(removed_groups) > 0) {
+      logger.info(paste0("The following group(s) had N=1 and were removed from the table:\n • ",
+                         paste(removed_groups, collapse = "\n • ")), call. = FALSE)
+    }
+    
+    subtitle_text <- paste0(paste(sprintf("N_%s: %s", 
+                                          group_rows_clean[[grouping_var]],
+                                          group_rows_clean$`N (events)`),
+                                  collapse = ", "),
+                            "\nP-value: ", 
+                            logrank_table$`p-value`[logrank_table[[grouping_var]] == "Overall"])
+    
+    old_strata_names <- names(km_fit_clean$strata)
     new_strata_names <- sub(".*=", "", old_strata_names)
-    names(km_fit_comp$strata) <- new_strata_names
+    names(km_fit_clean$strata) <- new_strata_names
     
-    yearly_survival$survival_year <- as.factor(yearly_survival$survival_year)
-    n_groups <- nlevels(as.factor(yearly_survival$survival_year))
+    n_groups <- length(names(km_fit_clean$strata))
     my_palette <- viridis(n_groups, option = "turbo")
     
     # Plot 
-    km_comp_curve <- ggsurvplot(km_fit_comp,
+    km_comp_curve <- ggsurvplot(km_fit_clean,
                                 data = yearly_survival,
                                 title = title_text,
                                 subtitle = subtitle_text,
                                 conf.int = TRUE,
                                 risk.table = FALSE,
-                                surv.median.line = "hv",
                                 palette = my_palette, 
                                 xlab = "Days at risk",
                                 ylab = "Survival probability",
-                                legend.title = "Survival year",
+                                legend.title = grouping_var,
                                 legend = "bottom",
-                                legend.labs = levels(yearly_survival$survival_year),
+                                legend.labs = levels(summary_table[[group_comparison_individual]]),
                                 censor.shape = "|",
                                 censor.size = 4,
                                 font.main = c(14, "bold", "black"),
@@ -1678,39 +1717,52 @@ rFunction = function(data,
                                     plot.subtitle = element_text(size = 12, color = "gray50"),
                                     axis.text    = element_text(color = "black"),
                                     panel.grid.major.y = element_line(color = "gray90"),
-                                    panel.border = element_rect(color="black", fill=NA, linewidth = 0.5),
+                                    panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
                                     plot.margin  = margin(10, 10, 10, 10)))
     
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
-    ggsave(filename = appArtifactPath("km_comparison_curves_survivalyear.png"), 
+    # Save plot 
+    ggsave(filename = appArtifactPath("km_comparison_curves.png"), 
            plot = km_comp_curve, 
            width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
-  
+    
     
     ## Cumulative hazard comparison plots ---
     
     # Prepare statistics for subtitle 
-    n_per_group <- km_fit_comp$n
-    sum_fit <- summary(km_fit_comp)
-    test <- surv_pvalue(km_fit_comp, data = yearly_survival)  
-    cumhaz_subtitle <- sprintf("Log-rank p = %.3f", test$pval)
+    n_per_group      <- km_fit_clean$n
+    sum_fit          <- summary(km_fit_clean)
+    events_per_group <- tapply(sum_fit$n.event, sum_fit$strata, sum, na.rm = TRUE)
+    
+    # Clean strata names  
+    clean_strata <- gsub("^.*=", "", names(km_fit_clean$strata))
+    
+    # Create one-line subtitle for groups: "N(Group): N (events)"
+    subtitle_parts <- mapply(function(group, n, ev) {
+      sprintf("N_%s: %d(%d)", group, n, ev)
+    },
+    clean_strata, n_per_group, events_per_group, SIMPLIFY = FALSE)
+    
+    groups_line <- paste(subtitle_parts, collapse = ", ")
+    test <- surv_pvalue(km_fit_clean, data = yearly_survival)
+    pval_text <- sprintf("P-value: %.3f", test$pval)
+    subtitle_text <- paste0(groups_line, "\n", pval_text)
     
     # Plot 
-    cum_hazard_comp <- ggsurvplot(km_fit_comp,
-                                  data = yearly_survival,
+    cum_hazard_comp <- ggsurvplot(km_fit_clean,
+                                  data         = yearly_survival,
                                   fun          = "cumhaz",
                                   conf.int     = TRUE,
                                   censor.shape = "|",
                                   censor.size  = 4,
-                                  title        = paste0("Cumulative Hazard by Survival Year"),
-                                  subtitle     = cumhaz_subtitle,   
+                                  title        = paste0("Cumulative Hazard by ", grouping_var),
+                                  subtitle     = subtitle_text,   
                                   xlab         = "Days at risk",
                                   ylab         = "Cumulative Hazard",
                                   legend       = "bottom",
-                                  legend.title = "Survival year",
-                                  legend.labs  = levels(yearly_survival$survival_year),
+                                  legend.title = grouping_var,
+                                  legend.labs  = levels(summary_table[[group_comparison_individual]]),
                                   palette      = my_palette,
                                   risk.table   = FALSE,
                                   cumevents    = FALSE,
@@ -1726,17 +1778,15 @@ rFunction = function(data,
                                           legend.position = "bottom",
                                           legend.title  = element_text(size = 11),
                                           legend.text   = element_text(size = 10)))
-  }
-  
-  # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
-  ggsave(filename = appArtifactPath("cum_hazard_comparison_plot_survivalyear.png"), 
-         plot = cum_hazard_comp, 
-         width = 10, height = 6, units = "in",
-         dpi = 300, 
-         bg = "white")
     
-  } else {
-    logger.info("Grouping by: ", group_comparison_individual)
+    # Save plot  
+    ggsave(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
+           plot = cum_hazard_comp, 
+           width = 10, height = 6, units = "in",
+           dpi = 300, 
+           bg = "white")
+    
+    } else if(!is.null(group_comparison_individual) && !is.null(survival_yr_start)) {
     
     # Fit survival object ---
     summary_table$time_at_risk <- summary_table$exit_time_days - summary_table$entry_time_days
@@ -1796,55 +1846,95 @@ rFunction = function(data,
     
     
     # KM comparison plots ---
-    km_fit_comp <- surv_fit(surv_formula, data = summary_table)  # use surv_fit instead of survfit
+    km_fit_comp <- surv_fit(surv_formula, data = summary_table)   
+    
+    # Check if any groups have N == 1 and remove 
+    filter_singleton_strata_refit <- function(fit, data) {
+      grouping_var <- all.vars(formula(fit))[3]   
+      n_per_group <- fit$n
+      group_names <- sub(".*=", "", names(fit$strata) %||% "Overall")
+      
+      # Identify groups where N == 1 
+      singletons <- n_per_group == 1
+      removed <- group_names[singletons]    
+      
+      if (any(singletons)) {
+        logger.info(paste("Removed the following singleton group(s) (N=1):\n",
+          paste(" •", removed, collapse = "\n ")), call. = FALSE)
+        
+        # Filter data using clean group names
+        data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
+        
+        # Refit 
+        km_clean <- surv_fit(formula(fit), data = data_clean)
+        
+        return(km_clean)
+      }
+      return(fit)
+    }
+    
+    km_fit_clean <- filter_singleton_strata_refit(km_fit_comp, summary_table)
     
     # Titles and formatting 
     title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
     
-    group_rows <- logrank_table %>% filter(!!sym(grouping_var) != "Overall")
+    group_rows <- logrank_table %>% 
+      filter(!!sym(grouping_var) != "Overall") 
+    
+    # Remove any rows where N = 1 
+    group_rows_clean <- group_rows %>%
+      filter(!str_detect(`N (events)`, "^1\\s*\\("))
+    
+    removed_groups <- group_rows %>%
+      filter(str_detect(`N (events)`, "^1\\s*\\(")) %>%
+      pull(1)
+    
+    if (length(removed_groups) > 0) {
+      logger.info(paste0("The following group(s) had N=1 and were removed from the table:\n • ",
+        paste(removed_groups, collapse = "\n • ")), call. = FALSE)
+    }
+    
     subtitle_text <- paste0(paste(sprintf("N_%s: %s", 
-                                          group_rows[[grouping_var]],
-                                          group_rows$`N (events)`),
+                                          group_rows_clean[[grouping_var]],
+                                          group_rows_clean$`N (events)`),
                                   collapse = ", "),
                             "\nP-value: ", 
                             logrank_table$`p-value`[logrank_table[[grouping_var]] == "Overall"])
     
-    old_strata_names <- names(km_fit_comp$strata)
+    old_strata_names <- names(km_fit_clean$strata)
     new_strata_names <- sub(".*=", "", old_strata_names)
-    names(km_fit_comp$strata) <- new_strata_names
+    names(km_fit_clean$strata) <- new_strata_names
     
-    n_groups <- length(names(km_fit_comp$strata))
+    n_groups <- length(names(km_fit_clean$strata))
     my_palette <- viridis(n_groups, option = "turbo")
     
     # Plot 
-    km_comp_curve <- ggsurvplot(km_fit_comp,
-                                 data = summary_table,
-                                 title = title_text,
-                                 subtitle = subtitle_text,
-                                 conf.int = TRUE,
-                                 #conf.in.style = "step",
-                                 risk.table = FALSE,
-                                 #surv.median.line = "hv",
-                                 palette = my_palette, 
-                                 xlab = "Days at risk",
-                                 ylab = "Survival probability",
-                                 legend.title = grouping_var,
-                                 legend = "bottom",
-                                 legend.labs = levels(summary_table[[group_comparison_individual]]),
-                                 censor.shape = "|",
-                                 censor.size = 4,
-                                 font.main = c(14, "bold", "black"),
-                                 font.x = 12, font.y = 12, font.tickslab = 11, 
-                                 ggtheme = theme_classic(base_size = 12) +
-                                   theme(
-                                     plot.title   = element_text(face = "bold", size = 14),
-                                     plot.subtitle = element_text(size = 12, color = "gray50"),
-                                     axis.text    = element_text(color = "black"),
-                                     panel.grid.major.y = element_line(color = "gray90"),
-                                     panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
-                                     plot.margin  = margin(10, 10, 10, 10)))
+    km_comp_curve <- ggsurvplot(km_fit_clean,
+                                data = summary_table,
+                                title = title_text,
+                                subtitle = subtitle_text,
+                                conf.int = TRUE,
+                                risk.table = FALSE,
+                                palette = my_palette, 
+                                xlab = "Days at risk",
+                                ylab = "Survival probability",
+                                legend.title = grouping_var,
+                                legend = "bottom",
+                                legend.labs = levels(summary_table[[group_comparison_individual]]),
+                                censor.shape = "|",
+                                censor.size = 4,
+                                font.main = c(14, "bold", "black"),
+                                font.x = 12, font.y = 12, font.tickslab = 11, 
+                                ggtheme = theme_classic(base_size = 12) +
+                                  theme(
+                                    plot.title   = element_text(face = "bold", size = 14),
+                                    plot.subtitle = element_text(size = 12, color = "gray50"),
+                                    axis.text    = element_text(color = "black"),
+                                    panel.grid.major.y = element_line(color = "gray90"),
+                                    panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
+                                    plot.margin  = margin(10, 10, 10, 10)))
     
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    # Save plot 
     ggsave(filename = appArtifactPath("km_comparison_curves.png"), 
            plot = km_comp_curve, 
            width = 10, height = 6, units = "in",
@@ -1855,12 +1945,12 @@ rFunction = function(data,
     ## Cumulative hazard comparison plots ---
     
     # Prepare statistics for subtitle 
-    n_per_group      <- km_fit_comp$n
-    sum_fit          <- summary(km_fit_comp)
+    n_per_group      <- km_fit_clean$n
+    sum_fit          <- summary(km_fit_clean)
     events_per_group <- tapply(sum_fit$n.event, sum_fit$strata, sum, na.rm = TRUE)
     
     # Clean strata names  
-    clean_strata <- gsub("^.*=", "", names(km_fit_comp$strata))
+    clean_strata <- gsub("^.*=", "", names(km_fit_clean$strata))
     
     # Create one-line subtitle for groups: "N(Group): N (events)"
     subtitle_parts <- mapply(function(group, n, ev) {
@@ -1869,15 +1959,15 @@ rFunction = function(data,
     clean_strata, n_per_group, events_per_group, SIMPLIFY = FALSE)
     
     groups_line <- paste(subtitle_parts, collapse = ", ")
-    test <- surv_pvalue(km_fit_comp, data = summary_table)
+    test <- surv_pvalue(km_fit_clean, data = summary_table)
     pval_text <- sprintf("P-value: %.3f", test$pval)
     subtitle_text <- paste0(groups_line, "\n", pval_text)
     
     # Plot 
-    cum_hazard_comp <- ggsurvplot(km_fit_comp,
+    cum_hazard_comp <- ggsurvplot(km_fit_clean,
                                   data = summary_table,
                                   fun          = "cumhaz",
-                                  #conf.int     = TRUE,
+                                  conf.int     = TRUE,
                                   censor.shape = "|",
                                   censor.size  = 4,
                                   title        = paste0("Cumulative Hazard by ", grouping_var),
@@ -1903,7 +1993,7 @@ rFunction = function(data,
                                           legend.title  = element_text(size = 11),
                                           legend.text   = element_text(size = 10)))
     
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
+    # Save plot 
     ggsave(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
            plot = cum_hazard_comp, 
            width = 10, height = 6, units = "in",
