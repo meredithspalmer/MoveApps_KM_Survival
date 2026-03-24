@@ -747,7 +747,7 @@ rFunction = function(data,
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(model == subset_condition_define_2) 
     } else {
-      yearly_survival <- yearly_survival %>% filter(model == as.integer(subset_condition_define_2))
+      yearly_survival <- yearly_survival %>% filter(model == subset_condition_define_2)
     }
   } 
   
@@ -1029,7 +1029,7 @@ rFunction = function(data,
     } 
   }
   
-  if(!is.null(group_comparison_individual) && group_comparison_individual == "survYear"){
+  if(!is.null(group_comparison_individual) && group_comparison_individual == "survival_year"){
     
     if(is.null(survival_yr_start)){ 
       logger.error("This comparison only makes sense if survival years are defined.")
@@ -1390,209 +1390,109 @@ rFunction = function(data,
   
   if(is.null(survival_yr_start)){
     
-    # Fit KM ---
+    # Fit model 
+    fitting_data <- summary_table
     km_fit <- survfit(Surv(entry_time_days, exit_time_days, mortality_event) ~ 1, 
-                      data = summary_table)
+                      data = fitting_data)
     
-    # Generate life table ---
+    # Data for life table 
     lt.length.out <- ceiling(max(summary_table$exit_time_days)/life_table_days)
     times <- round(seq(min(summary_table$entry_time_days), max(summary_table$exit_time_days), 
                        length.out = lt.length.out))
-    s <- summary(km_fit, times = times)
-    life_table <- data.frame(time_days        = s$time,
-                             n_risk           = s$n.risk,
-                             n_event          = s$n.event,
-                             survival_prob    = s$surv,
-                             std_err          = s$std.err,
-                             lower_95         = s$lower,
-                             upper_95         = s$upper)
     
-    # **unsure if the row.names will cause issues - double check 
-    write.csv(life_table, file = appArtifactPath("life_table.csv"), row.names = F)
+  } else {
     
-    # Plot KM curve ---
-    n.ind <- nrow(summary_table)
-    n.events <- nrow(summary_table[summary_table$mortality_event == 1,])
-    n.days <- as.numeric(summary(km_fit)$table["median"])
-    med <- survminer::surv_median(km_fit)
+    # Fit model 
+    fitting_data <- yearly_survival
+    km_fit <- survfit(Surv(days_at_risk, mortality_event) ~ 1, data = fitting_data)
     
-    km_curve <- ggsurvplot(
-      km_fit,
-      data = summary_table,
-      title = "Kaplan-Meier Survival Curve",
-      subtitle = paste0("N = ", n.ind, ", Events = ", n.events, ", Median Survival = ", 
-                        med$median, " days"),
-      xlab = "Time (days)",
-      ylab = "Survival Probability",
-      risk.table = FALSE,
-      conf.int = TRUE,
-      censor.shape = "|",
-      censor.size = 3,
-      legend = "none",
-      pval = FALSE,
-      surv.median.line = "hv",        
-      palette = c("#E69F00", "#56B4E9"),
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title         = element_text(face = "bold", size = 14), 
-              plot.subtitle      = element_text(size = 12, color = "gray50"),
-              axis.text          = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              line               = element_line(linewidth = 0.1),
-              plot.margin        = margin(10, 10, 10, 10)))
-    
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
-    ggsave(filename = appArtifactPath("km_survival_curve.png"), 
-           plot = km_curve, 
-           width = 10, height = 6, units = "in",
-           dpi = 300, 
-           bg = "white")
-    
-    
-    # Plot cumulative hazard curve --- 
-    cum_hazard <- ggsurvplot(
-      km_fit,
-      fun = "cumhaz",
-      conf.int = TRUE,
-      risk.table = FALSE,
-      cumevents = FALSE,                 
-      pval = FALSE,                     
-      xlab = "Time (days)",
-      ylab = "Cumulative Hazard",
-      title = "Cumulative Hazard",
-      subtitle = paste0("N = ", n.ind, ", Events = ", n.events), #update events 
-      palette = c("#E69F00", "#56B4E9"),
-      legend = "none",
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title   = element_text(face = "bold", size = 14), 
-              plot.subtitle = element_text(size = 12, color = "gray50"),
-              axis.text    = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              plot.margin  = margin(10, 10, 10, 10)))
-    
-    # Save plot CHECK THESE DIMENSIONS ARE GOOD *** 
-    ggsave(filename = appArtifactPath("cumulative_hazard_plot.png"), 
-           plot = cum_hazard, 
-           width = 10, height = 6, units = "in",
-           dpi = 300, 
-           bg = "white")
-
-  } 
-  
-  # Can also produce a single KM curve if data subset to single survival year or lifestage
-  if (!is.null(survival_yr_start) && 
-      (subset_condition_1 == "survival_year" || subset_condition_2 == "survival_year" ||
-       subset_condition_1 == "lifestage" || subset_condition_2 == "lifestage")){
-    
-    # Fit KM ---
-    km_fit <- survfit(Surv(days_at_risk, mortality_event) ~ 1, data = yearly_survival)
-    
-    # Generate life table ---
+    # Data for life table 
     max_days <- max(yearly_survival$days_at_risk, na.rm = TRUE)
     lt.length.out <- ceiling(max_days / life_table_days) + 1   
     times <- round(seq(0, max_days, length.out = lt.length.out))
-    
-    s <- summary(km_fit, times = times, extend = TRUE)     
-    life_table <- data.frame(time_days     = s$time,
-                             n_risk        = s$n.risk,
-                             n_event       = s$n.event,
-                             survival_prob = s$surv,
-                             std_err       = s$std.err,
-                             lower_95      = s$lower,
-                             upper_95      = s$upper)
-    
-    # Save
-    write.csv(life_table, file = appArtifactPath("life_table.csv"), row.names = F)
-    
-    
-    # Plot KM curve ---
-    
-    # Extract statistics
-    n_ind    <- nrow(yearly_survival)
-    n_events <- sum(yearly_survival$mortality_event == 1, na.rm = TRUE)
-    n_censored <- n_ind - n_events
-    
-    # Median survival time — handle NA case
-    median_days <- as.numeric(summary(km_fit)$table["median"])
-    if (is.na(median_days)) {
-      median_days <- Inf
-      median_label <- "not reached (survival > 50% at end of data)"
-    } else {
-      median_label <- sprintf("%.0f days", median_days)
-    }
-    
-    # CI if available; NA median if not reached
-    med <- surv_median(km_fit)
-    if (is.na(med$median)) {
-      med$median <- Inf
-      med$lower  <- NA
-      med$upper  <- NA
-    }
-    
-    # Plot 
-    km_curve <- ggsurvplot(
-      km_fit,
-      data = yearly_survival,
-      title = paste0("Kaplan-Meier Survival Curve: ", subset_condition_define_1, " & ", subset_condition_define_2),
-      subtitle = sprintf("n = %d intervals • %d deaths • %d censored • median = %s",
-                         n_ind, n_events, n_censored, median_label),
-      xlab = "Time (days)",
-      ylab = "Survival Probability",
-      risk.table = FALSE,
-      conf.int = TRUE,
-      censor.shape = "|",
-      censor.size = 3,
-      legend = "none",
-      pval = FALSE,
-      surv.median.line = "hv",        
-      palette = c("#E69F00", "#56B4E9"),
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title         = element_text(face = "bold", size = 14), 
-              plot.subtitle      = element_text(size = 12, color = "gray50"),
-              axis.text          = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              plot.margin        = margin(10, 10, 10, 10)))
-    
-    # Save plot 
-    ggsave(filename = appArtifactPath("km_survival_curve.png"), 
-           plot = km_curve, 
-           width = 10, height = 6, units = "in",
-           dpi = 300, 
-           bg = "white")
-  
-    
-    # Plot cumulative hazard curve --- 
-    cum_hazard <- ggsurvplot(
-      km_fit,
-      fun = "cumhaz",
-      conf.int = TRUE,
-      risk.table = FALSE,
-      cumevents = FALSE,                 
-      pval = FALSE,                     
-      xlab = "Time (days)",
-      ylab = "Cumulative Hazard",
-      title = paste0("Cumulative Hazard Curve: ", subset_condition_define_1, " & ", subset_condition_define_2),
-      subtitle = paste0("N = ", n.ind, ", Events = ", n_events),  
-      palette = c("#E69F00", "#56B4E9"),
-      legend = "none",
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title   = element_text(face = "bold", size = 14), 
-              plot.subtitle = element_text(size = 12, color = "gray50"),
-              axis.text    = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              plot.margin  = margin(10, 10, 10, 10)))
-    
-    # Save plot 
-    ggsave(filename = appArtifactPath("cumulative_hazard_plot.png"), 
-           plot = cum_hazard, 
-           width = 10, height = 6, units = "in",
-           dpi = 300, 
-           bg = "white")
   }
   
+  # Generate life table ---
+  s <- summary(km_fit, times = times)
+  life_table <- data.frame(time_days        = s$time,
+                           n_risk           = s$n.risk,
+                           n_event          = s$n.event,
+                           survival_prob    = s$surv,
+                           std_err          = s$std.err,
+                           lower_95         = s$lower,
+                           upper_95         = s$upper)
+  
+  # Save 
+  write.csv(life_table, file = appArtifactPath("life_table.csv"), row.names = F)
+  
+  # Plot KM curve ---
+  n.ind <- nrow(fitting_data)
+  n.events <- nrow(fitting_data[fitting_data$mortality_event == 1,])
+  n.days <- as.numeric(summary(km_fit)$table["median"])
+  med <- survminer::surv_median(km_fit)
+  
+  km_curve <- ggsurvplot(
+    km_fit,
+    data = fitting_data,
+    title = "Kaplan-Meier Survival Curve",
+    subtitle = paste0("N = ", n.ind, ", Events = ", n.events, ", Median Survival = ", 
+                      med$median, " days"),
+    xlab = "Time (days)",
+    ylab = "Survival Probability",
+    risk.table = FALSE,
+    conf.int = TRUE,
+    censor.shape = "|",
+    censor.size = 3,
+    legend = "none",
+    pval = FALSE,
+    surv.median.line = "hv",        
+    palette = c("#E69F00", "#56B4E9"),
+    ggtheme = theme_classic(base_size = 12) + 
+      theme(plot.title         = element_text(face = "bold", size = 14), 
+            plot.subtitle      = element_text(size = 12, color = "gray50"),
+            axis.text          = element_text(color = "black"),
+            panel.grid.major.y = element_line(color = "gray90"), 
+            panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
+            line               = element_line(linewidth = 0.1),
+            plot.margin        = margin(10, 10, 10, 10)))
+  
+  # Save plot 
+  ggsave(filename = appArtifactPath("km_survival_curve.png"), 
+         plot = km_curve, 
+         width = 10, height = 6, units = "in",
+         dpi = 300, 
+         bg = "white")
+  
+  # Plot cumulative hazard curve --- 
+  cum_hazard <- ggsurvplot(
+    km_fit,
+    fun = "cumhaz",
+    conf.int = TRUE,
+    risk.table = FALSE,
+    cumevents = FALSE,                 
+    pval = FALSE,                     
+    xlab = "Time (days)",
+    ylab = "Cumulative Hazard",
+    title = "Cumulative Hazard",
+    subtitle = paste0("N = ", n.ind, ", Events = ", n.events), 
+    palette = c("#E69F00", "#56B4E9"),
+    legend = "none",
+    ggtheme = theme_classic(base_size = 12) + 
+      theme(plot.title   = element_text(face = "bold", size = 14), 
+            plot.subtitle = element_text(size = 12, color = "gray50"),
+            axis.text    = element_text(color = "black"),
+            panel.grid.major.y = element_line(color = "gray90"), 
+            panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+            plot.margin  = margin(10, 10, 10, 10)))
+  
+  # Save plot 
+  ggsave(filename = appArtifactPath("cumulative_hazard_plot.png"), 
+         plot = cum_hazard, 
+         width = 10, height = 6, units = "in",
+         dpi = 300, 
+         bg = "white")
+  } 
+
   
   ## Survival Analysis: Group comparisons -------------------------------------
   
