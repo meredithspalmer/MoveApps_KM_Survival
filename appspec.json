@@ -168,7 +168,7 @@
           "displayText": "Model of tag"
         }, 
         {
-          "value": "survYear",
+          "value": "survival_year",
           "displayText": "Survival year (define below)"
         }
       ]

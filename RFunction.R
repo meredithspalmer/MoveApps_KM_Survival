@@ -1596,10 +1596,18 @@ rFunction = function(data,
   
   ## Survival Analysis: Group comparisons -------------------------------------
   
-  if (is.null(group_comparison_individual)) {
-    # do nothing 
+  # Dynamically update comparison variables 
+  grouping_labels <- c("model"                         = "Tag Model",
+                       "sex"                           = "Sex",
+                       "attachment"                    = "Tag Attachment", 
+                       "survival_year"                 = "Survival Year",
+                       "lifestage"                     = "Lifestage")
+  
+  # For yearly_summary data 
+  if (!is.null(group_comparison_individual) && !is.null(survival_yr_start)){
     
-  } else if (!is.null(group_comparison_individual) && !is.null(survival_yr_start)){
+    # Update headings if necessary
+    if(group_comparison_individual == "lifestage"){group_comparison_individual <- "animal_life_stage_new"}
     
     # Fit survival object 
     surv_formula <- as.formula(paste("Surv(days_at_risk, mortality_event) ~", group_comparison_individual))
@@ -1616,6 +1624,11 @@ rFunction = function(data,
     df_val       <- length(test$n) - 1
     p_val        <- 1 - pchisq(test$chisq, df_val)
     p_formatted  <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
+    
+    grouping_var <- grouping_labels[[group_comparison_individual]]
+    if (is.na(grouping_var)) {
+      logger.error("Unknown grouping variable: ", group_comparison_individual)
+    }
     
     # Summary table 
     per_group <- tibble(!!grouping_var   := sub(".*=", "", groups),
@@ -1712,13 +1725,16 @@ rFunction = function(data,
                                 font.main = c(14, "bold", "black"),
                                 font.x = 12, font.y = 12, font.tickslab = 11, 
                                 ggtheme = theme_classic(base_size = 12) +
-                                  theme(
-                                    plot.title   = element_text(face = "bold", size = 14),
-                                    plot.subtitle = element_text(size = 12, color = "gray50"),
-                                    axis.text    = element_text(color = "black"),
-                                    panel.grid.major.y = element_line(color = "gray90"),
-                                    panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
-                                    plot.margin  = margin(10, 10, 10, 10)))
+                                  theme(plot.title   = element_text(face = "bold", size = 14),
+                                        plot.subtitle = element_text(size = 12, color = "gray50"),
+                                        axis.text    = element_text(color = "black"),
+                                        panel.grid.major.y = element_line(color = "gray90"),
+                                        panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
+                                        plot.margin  = margin(10, 10, 10, 10)))
+    
+    km_comp_curve$plot <- km_comp_curve$plot + 
+      guides(color = guide_legend(nrow = ifelse(n_groups <= 4, 1, 2), byrow = TRUE,
+                                  title.position = "top"))
     
     # Save plot 
     ggsave(filename = appArtifactPath("km_comparison_curves.png"), 
@@ -1779,6 +1795,10 @@ rFunction = function(data,
                                           legend.title  = element_text(size = 11),
                                           legend.text   = element_text(size = 10)))
     
+    cum_hazard_comp$plot <- cum_hazard_comp$plot + 
+      guides(color = guide_legend(nrow = ifelse(n_groups <= 4, 1, 2), byrow = TRUE,
+                                  title.position = "top"))
+    
     # Save plot  
     ggsave(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
            plot = cum_hazard_comp, 
@@ -1786,7 +1806,10 @@ rFunction = function(data,
            dpi = 300, 
            bg = "white")
     
-    } else if(!is.null(group_comparison_individual) && !is.null(survival_yr_start)) {
+  } 
+  
+  # For summary table data 
+  if(!is.null(group_comparison_individual) && !is.null(survival_yr_start)) {
     
     # Fit survival object ---
     summary_table$time_at_risk <- summary_table$exit_time_days - summary_table$entry_time_days
@@ -1860,7 +1883,7 @@ rFunction = function(data,
       
       if (any(singletons)) {
         logger.info(paste("Removed the following singleton group(s) (N=1):\n",
-          paste(" •", removed, collapse = "\n ")), call. = FALSE)
+                          paste(" •", removed, collapse = "\n ")), call. = FALSE)
         
         # Filter data using clean group names
         data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
@@ -1891,7 +1914,7 @@ rFunction = function(data,
     
     if (length(removed_groups) > 0) {
       logger.info(paste0("The following group(s) had N=1 and were removed from the table:\n • ",
-        paste(removed_groups, collapse = "\n • ")), call. = FALSE)
+                         paste(removed_groups, collapse = "\n • ")), call. = FALSE)
     }
     
     subtitle_text <- paste0(paste(sprintf("N_%s: %s", 
@@ -1933,6 +1956,10 @@ rFunction = function(data,
                                     panel.grid.major.y = element_line(color = "gray90"),
                                     panel.border = element_rect(color="black", fill=NA, linewidth=0.5),
                                     plot.margin  = margin(10, 10, 10, 10)))
+    
+    km_comp_curve$plot <- km_comp_curve$plot + 
+      guides(color = guide_legend(nrow = ifelse(n_groups <= 4, 1, 2), byrow = TRUE,
+                                  title.position = "top"))
     
     # Save plot 
     ggsave(filename = appArtifactPath("km_comparison_curves.png"), 
@@ -1992,6 +2019,10 @@ rFunction = function(data,
                                           legend.position = "bottom",
                                           legend.title  = element_text(size = 11),
                                           legend.text   = element_text(size = 10)))
+    
+    cum_hazard_comp$plot <- cum_hazard_comp$plot + 
+      guides(color = guide_legend(nrow = ifelse(n_groups <= 4, 1, 2), byrow = TRUE,
+                                  title.position = "top"))
     
     # Save plot 
     ggsave(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
