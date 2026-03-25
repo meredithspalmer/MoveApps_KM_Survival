@@ -96,7 +96,7 @@
     {
       "id": "subset_condition_define_1",
       "name": "Define your subsetting condition",
-      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year as an integer (i.e., `3' for the 3rd survival year in your dataset). For other parameters, you will need the exact spelling,  capitalization, and/or formatting as your desired subset variable.",
+      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year (e.g., 2015, 2024). For other parameters, you will need the exact spelling,  capitalization, and/or formatting as your desired subset variable.",
       "defaultValue": null,
       "type": "STRING"
     },
@@ -136,7 +136,7 @@
     {
       "id": "subset_condition_define_2",
       "name": "Define your second subsetting condition",
-      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year as an integer (i.e., `3' for the 3rd survival year in your dataset). For other parameters, you will need the exact spelling,  capitalization, and/or formatting as your desired subset variable.",
+      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year (e.g., 2015, 2024). For other parameters, you will need the exact spelling,  capitalization, and/or formatting as your desired subset variable.",
       "defaultValue": null,
       "type": "STRING"
     },

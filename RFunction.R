@@ -31,7 +31,7 @@ rFunction = function(data,
                      calc_month_mort) {
   
   ## Load auxiliary data ------------------------------------------------------ 
-
+  
   if(!is.null(animal_birth_hatch_year_table)){
     animal_birth_hatch_year_table <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year_table"))
   }
@@ -49,7 +49,7 @@ rFunction = function(data,
   data <- dplyr::filter(data, !sf::st_is_empty(data))       # Exclude empty locations
   data <- mt_filter_unique(data)                            # Exclude marked outliers 
   data <- data %>% filter_track_data(is_test == FALSE)      # Exclude data marked "test"
-
+  
   
   ## Aggregate across multiple deployments (where present) ---
   
@@ -87,13 +87,13 @@ rFunction = function(data,
     events_with_ind <- events |>
       left_join(tracks, by = "deployment_id")
     
-    } else {
-      if (!"individual_local_identifier" %in% names(events)) {
-        logger.fatal("Cannot join: neither deployment_id nor individual_local_identifier is available in events")
-      }
-      logger.info("Joining on individual_local_identifier (deployment_id join not possible)")
-      events_with_ind <- events |> left_join(tracks, by = "individual_local_identifier")
+  } else {
+    if (!"individual_local_identifier" %in% names(events)) {
+      logger.fatal("Cannot join: neither deployment_id nor individual_local_identifier is available in events")
     }
+    logger.info("Joining on individual_local_identifier (deployment_id join not possible)")
+    events_with_ind <- events |> left_join(tracks, by = "individual_local_identifier")
+  }
   
   events_with_ind <- events_with_ind |>
     relocate(any_of(c("individual_id", "individual_local_identifier", "deployment_id", "timestamp")),
@@ -108,9 +108,9 @@ rFunction = function(data,
               n_deployments   = 
                 if ("deployment_id" %in% names(events_with_ind)) {
                   n_distinct(deployment_id, na.rm = TRUE)
-                  } else {
-                    1L  
-                    },
+                } else {
+                  1L  
+                },
               
               # Time-stamp columns: min / max if present
               timestamp_first_deployed_location = 
@@ -125,12 +125,12 @@ rFunction = function(data,
                 if ("deploy_on_timestamp" %in% names(events_with_ind)) {
                   if (all(is.na(deploy_on_timestamp))) as.POSIXct(NA) 
                   else min(deploy_on_timestamp, na.rm = TRUE)
-                  } else as.POSIXct(NA),
+                } else as.POSIXct(NA),
               
               deploy_off_timestamp = if ("deploy_off_timestamp" %in% names(events_with_ind)) {
                 if (all(is.na(deploy_off_timestamp))) as.POSIXct(NA)
                 else max(deploy_off_timestamp, na.rm = TRUE)
-                } else as.POSIXct(NA),
+              } else as.POSIXct(NA),
               
               # Mortality location column: 1/0 if filled if present 
               mortality_location_filled = if ("mortality_location_filled" %in% names(events_with_ind))
@@ -142,11 +142,11 @@ rFunction = function(data,
               
               mortality_type = if ("mortality_type" %in% names(events_with_ind)) {
                 str_c(unique(mortality_type[!is.na(mortality_type)]), collapse = " | ")
-                } else NA_character_,
+              } else NA_character_,
               
               mortality_date = if ("mortality_date" %in% names(events_with_ind)) {
                 str_c(unique(mortality_date[!is.na(mortality_date)]), collapse = " | ")
-                } else NA_character_,
+              } else NA_character_,
               
               death_comments = if ("death_comments" %in% names(events_with_ind))
                 str_c(unique(death_comments[!is.na(death_comments)]), collapse = " | ") 
@@ -166,7 +166,7 @@ rFunction = function(data,
               
               model = if ("model" %in% names(events_with_ind)) {
                 str_c(unique(model[!is.na(model)]), collapse = " | ")
-                } else NA_character_,
+              } else NA_character_,
               
               attachment_type = if ("attachment_type" %in% names(events_with_ind))
                 str_c(unique(attachment_type[!is.na(attachment_type)]), collapse = " | ") 
@@ -184,7 +184,7 @@ rFunction = function(data,
                       "deployment_end_type",
                       "animal_birth_hatch_year")),
              ~ if_else(. == "", NA_character_, .)),
-        
+      
       # Convert deploy timestamps 
       across(any_of(c("deploy_on_timestamp", "deploy_off_timestamp")), as.Date))
   
@@ -207,7 +207,7 @@ rFunction = function(data,
     if (n_missing > 0) {
       logger.info(
         sprintf("Warning: Replaced %d missing deploy_on_timestamp value%s with first_timestamp.",
-                       n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
+                n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -217,7 +217,7 @@ rFunction = function(data,
     
     if (n_missing > 0) {
       logger.info(sprintf("Warning: Removed %d deploy_on_timestamp value%s that were NA.", n_missing,
-                       if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
+                          if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -255,7 +255,7 @@ rFunction = function(data,
     
     if (n_missing > 0) {
       logger.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with current date.",
-                       n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
+                          n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
   }
   
@@ -302,27 +302,27 @@ rFunction = function(data,
     
     if (n_removed > 0) {
       logger.info(paste0("Warning: Removed ", n_removed, " individual(s) because deploy_off_timestamp occurred within ", censor_capture_mortality, " day(s) after deploy_on_timestamp"),
-               call. = FALSE, immediate. = TRUE)
+                  call. = FALSE, immediate. = TRUE)
     } 
   }
   
   # Crop to study period of interest 
-
+  
   # Save original deploy_off_time 
   summary_table <- summary_table %>% mutate(raw_deploy_off_timestamp = deploy_off_timestamp) 
   
   # Define window 
   effective_start <- if (is.null(time_period_start)) {
     min(summary_table$deploy_on_timestamp, na.rm = TRUE)
-    } else {
-      time_period_start
-    }
+  } else {
+    time_period_start
+  }
   
   effective_end <- if (is.null(time_period_end)) {
     max(summary_table$deploy_off_timestamp, na.rm = TRUE)
-    } else {
-      time_period_end
-    }  
+  } else {
+    time_period_end
+  }  
   
   # Run updates 
   if(!is.null(time_period_start) | !is.null(time_period_end)){
@@ -364,7 +364,7 @@ rFunction = function(data,
            analysis_exit_date  = pmin(deploy_off_timestamp, effective_end, na.rm = TRUE),
            entry_time_days = as.numeric(difftime(analysis_entry_date, origin_date, units = "days")),
            exit_time_days  = as.numeric(difftime(analysis_exit_date,  origin_date, units = "days"))) 
-
+  
   
   ## Calculate mortality indicator --------------------------------------------
   # Event = 1 if observed death, 0 if censored or survived 
@@ -381,24 +381,24 @@ rFunction = function(data,
     # Identify survivors (individuals who last beyond study)
     mutate(survived_beyond_study = !is.na(raw_deploy_off_timestamp) &
              raw_deploy_off_timestamp > as.Date(effective_end),
-      mortality_event = if_else(survived_beyond_study, 0L, mortality_event),
-      
-      # Update columns to remove ambiguity (e.g., if animal dies after study window)
-      death_comments = if ("death_comments" %in% names(.)) {
-        if_else(survived_beyond_study, "survived beyond study", death_comments)
-      } else death_comments,
-      
-      deployment_end_comments = if ("deployment_end_comments" %in% names(.)) {
-        if_else(survived_beyond_study, "survived beyond study", deployment_end_comments)
-      } else deployment_end_comments,
-      
-      deployment_end_type = if ("deployment_end_type" %in% names(.)) {
-        if_else(survived_beyond_study, "survived beyond study", deployment_end_type)
-      } else deployment_end_type,
-      
-      mortality_location_filled = if ("mortality_location_filled" %in% names(.)) {
-        if_else(survived_beyond_study, 0L, mortality_location_filled)
-      } else mortality_location_filled) %>%
+           mortality_event = if_else(survived_beyond_study, 0L, mortality_event),
+           
+           # Update columns to remove ambiguity (e.g., if animal dies after study window)
+           death_comments = if ("death_comments" %in% names(.)) {
+             if_else(survived_beyond_study, "survived beyond study", death_comments)
+           } else death_comments,
+           
+           deployment_end_comments = if ("deployment_end_comments" %in% names(.)) {
+             if_else(survived_beyond_study, "survived beyond study", deployment_end_comments)
+           } else deployment_end_comments,
+           
+           deployment_end_type = if ("deployment_end_type" %in% names(.)) {
+             if_else(survived_beyond_study, "survived beyond study", deployment_end_type)
+           } else deployment_end_type,
+           
+           mortality_location_filled = if ("mortality_location_filled" %in% names(.)) {
+             if_else(survived_beyond_study, 0L, mortality_location_filled)
+           } else mortality_location_filled) %>%
     
     # Search for mortality indicators
     # A. "death_comments" keywords
@@ -407,21 +407,21 @@ rFunction = function(data,
       "death_comments" %in% names(.) & str_detect(tolower(death_comments), positive_pattern) ~ 1L,
       mortality_event == 1L ~ 1L,
       TRUE ~ mortality_event)) %>%
-      
+    
     # B: "deployment_end_comments" contains mortality keywords  
     mutate(mortality_event = case_when(
       mortality_event == 1L ~ 1L,  
       "deployment_end_comments" %in% names(.) &
         str_detect(tolower(deployment_end_comments), positive_pattern) ~ 1L,
       TRUE ~ mortality_event)) %>%
-      
+    
     # C: "mortality_type" is filled (non-NA) 
     mutate(mortality_event = case_when(
       mortality_event == 1L ~ 1L,   
       "mortality_type" %in% names(.) &
         !is.na(mortality_type) ~ 1L,
       TRUE ~ mortality_event)) %>%
-      
+    
     # C. "mortality_location_filled" is filled 
     mutate(mortality_event = case_when(
       "mortality_location_filled" %in% names(.) &
@@ -445,13 +445,13 @@ rFunction = function(data,
       (!"deployment_end_type" %in% names(.) | is.na(deployment_end_type)) &
         is.na(mortality_event) ~ 0L,
       TRUE ~ mortality_event)) %>%
-      
+    
     # Final censoring: remaining NA → 0 (only if we have "deploy_off_timestamp")
     mutate(mortality_event = if_else(
       is.na(mortality_event) & !is.na(deploy_off_timestamp),
       0L,
       mortality_event)) %>%
-      
+    
     # Clean data frame  
     select(-survived_beyond_study) %>%
     relocate(mortality_event, .after = deployment_end_type)
@@ -460,13 +460,13 @@ rFunction = function(data,
   n_mort_events <- sum(summary_table$mortality_event == 1, na.rm = TRUE)
   if (n_mort_events == 0) {
     logger.fatal("Cannot run survival analysis: no mortality events detected.",
-            call. = FALSE, immediate. = TRUE)
+                 call. = FALSE, immediate. = TRUE)
   }
   
   # Produce warning: Small proportion of deaths 
   if (n_mort_events <= 10) {
     logger.warn(sprintf("Few (%d) deaths detected across entire dataset. Particularly if data is further subset, model may have low statistical power. This could potentially result in unreliable estimates and poor predictive capacity", n_mort_events),
-            call. = FALSE, immediate. = TRUE)
+                call. = FALSE, immediate. = TRUE)
   }
   
   
@@ -499,11 +499,11 @@ rFunction = function(data,
         survival_year <- y
         period_start  <- period_start_this_year
         period_end    <- safe_make_date(y + 1, start_month, start_day) - days(1)
-        } else {
-          survival_year <- y - 1
-          period_start  <- safe_make_date(y - 1, start_month, start_day)
-          period_end    <- safe_make_date(y, start_month, start_day) - days(1)
-        }
+      } else {
+        survival_year <- y - 1
+        period_start  <- safe_make_date(y - 1, start_month, start_day)
+        period_end    <- safe_make_date(y, start_month, start_day) - days(1)
+      }
       
       tibble(survival_year = survival_year,
              period_start  = period_start,
@@ -620,7 +620,7 @@ rFunction = function(data,
   
   
   ## Calculate life stages per year (if selected) -----------------------------
-
+  
   # Note: this needs auxiliary file to be loaded (errors earlier in code upon loading) 
   # Note: this needs "survival_yr_start" to be defined 
   if(!is.null(animal_birth_hatch_year_table) && is.null(survival_yr_start)){
@@ -664,7 +664,7 @@ rFunction = function(data,
                  first(default = "adult"))) %>% 
       select(-matched_threshold)
   }
-
+  
   
   ## Subset based on condition (if selected) ----------------------------------
   
@@ -776,8 +776,8 @@ rFunction = function(data,
       logger.fatal("There are no individuals meeting the both subsetting conditions.")
     }
   }
-
-    
+  
+  
   ## Clean user-defined grouping attributes (if selected) ---------------------
   
   if(!is.null(group_comparison_individual) && group_comparison_individual == "sex"){
@@ -1068,7 +1068,7 @@ rFunction = function(data,
   
   
   ## Basic summaries of data ------------------------------------------------
-    
+  
   # Plot each individual's tracking history --- 
   
   if(is.null(survival_yr_start)){
@@ -1128,49 +1128,49 @@ rFunction = function(data,
     }
     
     tracking_history <- ggplot(deployment_summary) +
-        geom_segment(aes(x = plot_start, xend = plot_end,
-                         y = individual_label, yend = individual_label),
-                     linewidth = 3.2,
-                     color = "grey") +
-        geom_point(aes(x = plot_start, y = individual_label),
-                   color = "#1F77B4", size = 3.5) +
-        geom_point(aes(x = plot_end, y = individual_label),
-                   color = "#9467BD", size = 3.5) +
-        geom_segment(data = deployment_summary |>
-                       group_by(individual_label) |>
-                       arrange(plot_start) |>
-                       mutate(
-                         prev_end  = lag(plot_end),
-                         gap_start = prev_end,
-                         gap_end   = plot_start,
-                         gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
-                       filter(gap_days > 30, !is.na(gap_days)),
-                     aes(x    = gap_start + (gap_end - gap_start)/2,
-                         xend = gap_start + (gap_end - gap_start)/2,
-                         y    = as.numeric(individual_label),
-                         yend = as.numeric(individual_label) + 0.45),
-                     color     = "grey50",
-                     linewidth = 1.2,
-                     arrow     = arrow(length = unit(0.18, "cm"), type = "closed")) +
-        labs(title    = paste0("Individual Collared Periods", title_suffix),
-             subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
-                                n_distinct(deployment_summary$individual_id),
-                                nrow(deployment_summary),
-                                n_locs_total),
-             x = "Time",
-             y = "Individual ID") +
-        theme_minimal(base_size = 12) +
-        theme(axis.text.y       = element_text(size = 8, face = "plain"),
-              panel.grid.major.y = element_blank(),
-              panel.grid.minor   = element_blank(),
-              plot.title        = element_text(face = "bold", size = 14),
-              plot.subtitle     = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
-              axis.text.x       = element_text(angle = 45, hjust = 1, vjust = 1),
-              axis.title        = element_text(size = 12)) +
-        scale_x_datetime(date_breaks  = "1 year",
-                         date_labels  = "%Y",
-                         expand       = expansion(mult = c(0.01, 0.03)),
-                         limits       = if (has_time_filter) c(t_start, t_end) else NULL)
+      geom_segment(aes(x = plot_start, xend = plot_end,
+                       y = individual_label, yend = individual_label),
+                   linewidth = 3.2,
+                   color = "grey") +
+      geom_point(aes(x = plot_start, y = individual_label),
+                 color = "#1F77B4", size = 3.5) +
+      geom_point(aes(x = plot_end, y = individual_label),
+                 color = "#9467BD", size = 3.5) +
+      geom_segment(data = deployment_summary |>
+                     group_by(individual_label) |>
+                     arrange(plot_start) |>
+                     mutate(
+                       prev_end  = lag(plot_end),
+                       gap_start = prev_end,
+                       gap_end   = plot_start,
+                       gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
+                     filter(gap_days > 30, !is.na(gap_days)),
+                   aes(x    = gap_start + (gap_end - gap_start)/2,
+                       xend = gap_start + (gap_end - gap_start)/2,
+                       y    = as.numeric(individual_label),
+                       yend = as.numeric(individual_label) + 0.45),
+                   color     = "grey50",
+                   linewidth = 1.2,
+                   arrow     = arrow(length = unit(0.18, "cm"), type = "closed")) +
+      labs(title    = paste0("Individual Collared Periods", title_suffix),
+           subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
+                              n_distinct(deployment_summary$individual_id),
+                              nrow(deployment_summary),
+                              n_locs_total),
+           x = "Time",
+           y = "Individual ID") +
+      theme_minimal(base_size = 12) +
+      theme(axis.text.y       = element_text(size = 8, face = "plain"),
+            panel.grid.major.y = element_blank(),
+            panel.grid.minor   = element_blank(),
+            plot.title        = element_text(face = "bold", size = 14),
+            plot.subtitle     = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
+            axis.text.x       = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title        = element_text(size = 12)) +
+      scale_x_datetime(date_breaks  = "1 year",
+                       date_labels  = "%Y",
+                       expand       = expansion(mult = c(0.01, 0.03)),
+                       limits       = if (has_time_filter) c(t_start, t_end) else NULL)
     
     # Save plot 
     plot_height <- length(unique(yearly_survival$individual_id)) / 7
@@ -1183,7 +1183,7 @@ rFunction = function(data,
            units = "in",
            dpi = 300, 
            bg = "white")
-
+    
     
     # Calculate monthly mortality
     if(calc_month_mort == TRUE){
@@ -1243,7 +1243,7 @@ rFunction = function(data,
              width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
-      }
+    }
     
   } else {
     
@@ -1318,7 +1318,7 @@ rFunction = function(data,
     # Save plot 
     plot_height <- length(unique(yearly_survival$individual_id)) / 7
     plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
-     
+    
     ggsave(filename = appArtifactPath("tracking_history.png"), 
            plot = tracking_history, 
            width = plot_width, 
@@ -1327,7 +1327,7 @@ rFunction = function(data,
            dpi = 300, 
            bg = "white")
     
-
+    
     # Calculate monthly mortality 
     if(calc_month_mort == TRUE){
       mortality_data <- yearly_survival |>
@@ -1362,8 +1362,8 @@ rFunction = function(data,
                "Total events: ", sum(monthly_morts$n_mortalities, na.rm = TRUE),
                " • Time span: ", format(min(yearly_survival$deploy_on_timestamp, na.rm = TRUE), "%b %Y"),
                " to ", format(max(yearly_survival$deploy_off_timestamp, na.rm = TRUE), "%b %Y")),
-          x = NULL,
-          y = "Year") +
+             x = NULL,
+             y = "Year") +
         theme_minimal(base_size = 14) +
         theme(panel.grid       = element_blank(),
               axis.ticks       = element_blank(),
@@ -1383,12 +1383,17 @@ rFunction = function(data,
              bg = "white")
     }
   }
-    
   
-
+  
+  
   ## Survival Analysis: No comparisons ----------------------------------------
   
   if(is.null(survival_yr_start)){
+    
+    # Warning for not mortality 
+    if(sum(summary_table$mortality_event) > 0){
+      logger.warn("There are no mortality events in the chosen subset of data.")
+    }
     
     # Fit model 
     fitting_data <- summary_table
@@ -1401,6 +1406,11 @@ rFunction = function(data,
                        length.out = lt.length.out))
     
   } else {
+    
+    # Warning for no mortality 
+    if(sum(yearly_survival$mortality_event) == 0){
+      logger.warn("There are no mortality events in the chosen subset of data.")
+    }
     
     # Fit model 
     fitting_data <- yearly_survival
@@ -1491,108 +1501,112 @@ rFunction = function(data,
          width = 10, height = 6, units = "in",
          dpi = 300, 
          bg = "white")
-  } 
+} 
 
+
+## Survival Analysis: Group comparisons -------------------------------------
+
+# Dynamically update comparison variables 
+grouping_labels <- c("model"                         = "Tag Model",
+                     "sex"                           = "Sex",
+                     "attachment"                    = "Tag Attachment", 
+                     "survival_year"                 = "Survival Year",
+                     "animal_life_stage_new"         = "Lifestage")
+
+# For yearly_summary data 
+if (!is.null(group_comparison_individual) && !is.null(survival_yr_start)){
   
-  ## Survival Analysis: Group comparisons -------------------------------------
+  # Update headings if necessary
+  if(group_comparison_individual == "lifestage"){group_comparison_individual <- "animal_life_stage_new"}
   
-  # Dynamically update comparison variables 
-  grouping_labels <- c("model"                         = "Tag Model",
-                       "sex"                           = "Sex",
-                       "attachment"                    = "Tag Attachment", 
-                       "survival_year"                 = "Survival Year",
-                       "lifestage"                     = "Lifestage")
+  # Fit survival object 
+  surv_formula <- as.formula(paste("Surv(days_at_risk, mortality_event) ~", group_comparison_individual))
+  km_fit_comp <- survfit(surv_formula, data = yearly_survival) 
   
-  # For yearly_summary data 
-  if (!is.null(group_comparison_individual) && !is.null(survival_yr_start)){
+  # Log-Rank test --- 
+  test <- survdiff(surv_formula, data=yearly_survival)
+  
+  # Extract components
+  groups       <- names(test$n)
+  n_total      <- sum(test$n)
+  events_total <- sum(test$obs)
+  chisq_val    <- round(test$chisq, 2)
+  df_val       <- length(test$n) - 1
+  p_val        <- 1 - pchisq(test$chisq, df_val)
+  p_formatted  <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
+  
+  grouping_var <- grouping_labels[[group_comparison_individual]]
+  if (is.na(grouping_var)) {
+    logger.error("Unknown grouping variable: ", group_comparison_individual)
+  }
+  
+  # Summary table 
+  per_group <- tibble(!!grouping_var   := sub(".*=", "", groups),
+                      `N`                      = test$n,
+                      `Events`                 = test$obs,
+                      `Expected events`        = round(test$exp, 2),
+                      `O/E ratio`              = round(test$obs / test$exp, 2)) %>%
+    mutate(`N (events)` = sprintf("%d (%d)", N, Events), .keep = "unused")
+  
+  summary_row <- tibble(!!grouping_var          := "Overall",
+                        `N (events)`             = sprintf("%d (%d)", n_total, events_total),
+                        `Chisq (log-rank)`       = chisq_val,
+                        `df`                     = df_val,
+                        `p-value`                = p_formatted)
+  
+  logrank_table <- bind_rows(per_group, summary_row)
+  logrank_table <- logrank_table %>%
+    dplyr::select(any_of(grouping_var), `N (events)`, `Expected events`, `O/E ratio`,
+                  `Chisq (log-rank)`, df, `p-value`)
+  
+  # Save
+  write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv"), row.names = F)
+  
+  
+  # KM comparison plots ---
+  km_fit_comp <- surv_fit(surv_formula, data = yearly_survival)  
+  
+  # Check if any groups have N == 1 and remove 
+  filter_singleton_strata_refit <- function(fit, data) {
     
-    # Update headings if necessary
-    if(group_comparison_individual == "lifestage"){group_comparison_individual <- "animal_life_stage_new"}
+    grouping_var <- all.vars(formula(fit))[3]    
+    n_per_group <- fit$n
+    group_names <- sub(".*=", "", names(fit$strata) %||% "Overall")
     
-    # Fit survival object 
-    surv_formula <- as.formula(paste("Surv(days_at_risk, mortality_event) ~", group_comparison_individual))
-    km_fit_comp <- survfit(surv_formula, data = yearly_survival) 
+    singletons <- n_per_group == 1
+    removed <- group_names[singletons]   
     
-    # Log-Rank test --- 
-    test <- survdiff(surv_formula, data=yearly_survival)
-    
-    # Extract components
-    groups       <- names(test$n)
-    n_total      <- sum(test$n)
-    events_total <- sum(test$obs)
-    chisq_val    <- round(test$chisq, 2)
-    df_val       <- length(test$n) - 1
-    p_val        <- 1 - pchisq(test$chisq, df_val)
-    p_formatted  <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
-    
-    grouping_var <- grouping_labels[[group_comparison_individual]]
-    if (is.na(grouping_var)) {
-      logger.error("Unknown grouping variable: ", group_comparison_individual)
-    }
-    
-    # Summary table 
-    per_group <- tibble(!!grouping_var   := sub(".*=", "", groups),
-                        `N`                      = test$n,
-                        `Events`                 = test$obs,
-                        `Expected events`        = round(test$exp, 2),
-                        `O/E ratio`              = round(test$obs / test$exp, 2)) %>%
-      mutate(`N (events)` = sprintf("%d (%d)", N, Events), .keep = "unused")
-    
-    summary_row <- tibble(!!grouping_var          := "Overall",
-                          `N (events)`             = sprintf("%d (%d)", n_total, events_total),
-                          `Chisq (log-rank)`       = chisq_val,
-                          `df`                     = df_val,
-                          `p-value`                = p_formatted)
-    
-    logrank_table <- bind_rows(per_group, summary_row)
-    logrank_table <- logrank_table %>%
-      dplyr::select(any_of(grouping_var), `N (events)`, `Expected events`, `O/E ratio`,
-                    `Chisq (log-rank)`, df, `p-value`)
-    
-    # Save
-    write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv"), row.names = F)
-    
-    
-    # KM comparison plots ---
-    km_fit_comp <- surv_fit(surv_formula, data = yearly_survival)  
-    
-    # Check if any groups have N == 1 and remove 
-    filter_singleton_strata_refit <- function(fit, data) {
+    if (any(singletons)) {
+      logger.info(paste("Removed the following singleton group(s) (N=1):\n",
+                        paste(" •", removed, collapse = "\n ")), call. = FALSE)
       
-      grouping_var <- all.vars(formula(fit))[3]    
-      n_per_group <- fit$n
-      group_names <- sub(".*=", "", names(fit$strata) %||% "Overall")
+      # Filter data using clean group names
+      data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
       
-      singletons <- n_per_group == 1
-      removed <- group_names[singletons]   
-      
-      if (any(singletons)) {
-        logger.info(paste("Removed the following singleton group(s) (N=1):\n",
-                          paste(" •", removed, collapse = "\n ")), call. = FALSE)
-        
-        # Filter data using clean group names
-        data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
-        
-        # Refit 
-        km_clean <- surv_fit(formula(fit), data = data_clean)
-        return(km_clean)
-      }
-      return(fit)
+      # Refit 
+      km_clean <- surv_fit(formula(fit), data = data_clean)
+      return(km_clean)
     }
+    return(fit)
+  }
+  
+  km_fit_clean <- filter_singleton_strata_refit(km_fit_comp, yearly_survival)
+  
+  title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
+  group_rows <- logrank_table %>% filter(!!sym(grouping_var) != "Overall") 
+  group_rows_clean <- group_rows %>% filter(!str_detect(`N (events)`, "^1\\s*\\("))
+  removed_groups <- group_rows %>% filter(str_detect(`N (events)`, "^1\\s*\\(")) %>%
+    pull(1)
+  
+  if (length(removed_groups) > 0) {
+    logger.info(paste0("The following group(s) had N=1 and were removed from the table:\n • ",
+                       paste(removed_groups, collapse = "\n • ")), call. = FALSE)
+  }
+  
+  if (nrow(group_rows_clean == 1)){
+    logger.fatal("There is only one group left; unable to perform comparisons.")
     
-    km_fit_clean <- filter_singleton_strata_refit(km_fit_comp, yearly_survival)
-    
-    title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
-    group_rows <- logrank_table %>% filter(!!sym(grouping_var) != "Overall") 
-    group_rows_clean <- group_rows %>% filter(!str_detect(`N (events)`, "^1\\s*\\("))
-    removed_groups <- group_rows %>% filter(str_detect(`N (events)`, "^1\\s*\\(")) %>%
-      pull(1)
-    
-    if (length(removed_groups) > 0) {
-      logger.info(paste0("The following group(s) had N=1 and were removed from the table:\n • ",
-                         paste(removed_groups, collapse = "\n • ")), call. = FALSE)
-    }
-    
+  } else {
     subtitle_text <- paste0(paste(sprintf("N_%s: %s", 
                                           group_rows_clean[[grouping_var]],
                                           group_rows_clean$`N (events)`),
@@ -1705,118 +1719,122 @@ rFunction = function(data,
            width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
-    
-  } 
+  }
+} 
+
+# For summary table data 
+if(!is.null(group_comparison_individual) && is.null(survival_yr_start)) {
   
-  # For summary table data 
-  if(!is.null(group_comparison_individual) && !is.null(survival_yr_start)) {
+  # Fit survival object ---
+  summary_table$time_at_risk <- summary_table$exit_time_days - summary_table$entry_time_days
+  formula_str <- paste("Surv(time_at_risk, mortality_event) ~", group_comparison_individual)
+  surv_formula <- as.formula(formula_str)
+  km_fit_comp <- survfit(surv_formula, data = summary_table)
+  
+  
+  # Log-Rank test --- 
+  test <- survdiff(surv_formula, data=summary_table)
+  
+  # Extract components
+  groups <- names(test$n)
+  n_total <- sum(test$n)
+  events_total <- sum(test$obs)
+  chisq_val <- round(test$chisq, 2)
+  df_val <- length(test$n) - 1
+  p_val <- 1 - pchisq(test$chisq, df_val)
+  p_formatted <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
+  
+  # Dynamically update comparison variables 
+  grouping_labels <- c("model"                         = "Tag model",
+                       "sex"                           = "Sex",
+                       "attachment"                    = "Tag Attachment")
+  grouping_var <- grouping_labels[[group_comparison_individual]]
+  if (is.na(grouping_var)) {
+    logger.error("Unknown grouping variable: ", group_comparison_individual)
+  }
+  
+  # Summary table 
+  per_group <- tibble(!!grouping_var   := sub(".*=", "", groups),
+                      `N`               = test$n,
+                      `Events`          = test$obs,
+                      `Expected events` = round(test$exp, 2),
+                      `O/E ratio`       = round(test$obs / test$exp, 2)) %>%
+    mutate(`N (events)` = sprintf("%d (%d)", N, Events), .keep = "unused")
+  
+  
+  summary_row <- tibble(!!grouping_var          := "Overall",
+                        `N (events)`             = sprintf("%d (%d)", n_total, events_total),
+                        `Chisq (log-rank)`       = chisq_val,
+                        `df`                     = df_val,
+                        `p-value`                = p_formatted)
+  
+  logrank_table <- bind_rows(per_group, summary_row)
+  logrank_table <- logrank_table %>%
+    dplyr::select(any_of(grouping_var), 
+                  `N (events)`,
+                  `Expected events`,
+                  `O/E ratio`,
+                  `Chisq (log-rank)`,
+                  df,
+                  `p-value`)
+  
+  # Save
+  write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv"), row.names = F)
+  
+  
+  # KM comparison plots ---
+  km_fit_comp <- surv_fit(surv_formula, data = summary_table)   
+  
+  # Check if any groups have N == 1 and remove 
+  filter_singleton_strata_refit <- function(fit, data) {
+    grouping_var <- all.vars(formula(fit))[3]   
+    n_per_group <- fit$n
+    group_names <- sub(".*=", "", names(fit$strata) %||% "Overall")
     
-    # Fit survival object ---
-    summary_table$time_at_risk <- summary_table$exit_time_days - summary_table$entry_time_days
-    formula_str <- paste("Surv(time_at_risk, mortality_event) ~", group_comparison_individual)
-    surv_formula <- as.formula(formula_str)
-    km_fit_comp <- survfit(surv_formula, data = summary_table)
+    # Identify groups where N == 1 
+    singletons <- n_per_group == 1
+    removed <- group_names[singletons]    
     
-    
-    # Log-Rank test --- 
-    test <- survdiff(surv_formula, data=summary_table)
-    
-    # Extract components
-    groups <- names(test$n)
-    n_total <- sum(test$n)
-    events_total <- sum(test$obs)
-    chisq_val <- round(test$chisq, 2)
-    df_val <- length(test$n) - 1
-    p_val <- 1 - pchisq(test$chisq, df_val)
-    p_formatted <- ifelse(p_val < 0.001, "<0.001", sprintf("%.3f", p_val))
-    
-    # Dynamically update comparison variables 
-    grouping_labels <- c("model"                         = "Tag model",
-                         "sex"                           = "Sex",
-                         "attachment"                    = "Tag Attachment")
-    grouping_var <- grouping_labels[[group_comparison_individual]]
-    if (is.na(grouping_var)) {
-      logger.error("Unknown grouping variable: ", group_comparison_individual)
-    }
-    
-    # Summary table 
-    per_group <- tibble(!!grouping_var   := sub(".*=", "", groups),
-                        `N`               = test$n,
-                        `Events`          = test$obs,
-                        `Expected events` = round(test$exp, 2),
-                        `O/E ratio`       = round(test$obs / test$exp, 2)) %>%
-      mutate(`N (events)` = sprintf("%d (%d)", N, Events), .keep = "unused")
-    
-    
-    summary_row <- tibble(!!grouping_var          := "Overall",
-                          `N (events)`             = sprintf("%d (%d)", n_total, events_total),
-                          `Chisq (log-rank)`       = chisq_val,
-                          `df`                     = df_val,
-                          `p-value`                = p_formatted)
-    
-    logrank_table <- bind_rows(per_group, summary_row)
-    logrank_table <- logrank_table %>%
-      dplyr::select(any_of(grouping_var), 
-                    `N (events)`,
-                    `Expected events`,
-                    `O/E ratio`,
-                    `Chisq (log-rank)`,
-                    df,
-                    `p-value`)
-    
-    # Save
-    write.csv(logrank_table, file = appArtifactPath("logrank_table_statistics.csv"), row.names = F)
-    
-    
-    # KM comparison plots ---
-    km_fit_comp <- surv_fit(surv_formula, data = summary_table)   
-    
-    # Check if any groups have N == 1 and remove 
-    filter_singleton_strata_refit <- function(fit, data) {
-      grouping_var <- all.vars(formula(fit))[3]   
-      n_per_group <- fit$n
-      group_names <- sub(".*=", "", names(fit$strata) %||% "Overall")
+    if (any(singletons)) {
+      logger.info(paste("Removed the following singleton group(s) (N=1):\n",
+                        paste(" •", removed, collapse = "\n ")), call. = FALSE)
       
-      # Identify groups where N == 1 
-      singletons <- n_per_group == 1
-      removed <- group_names[singletons]    
+      # Filter data using clean group names
+      data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
       
-      if (any(singletons)) {
-        logger.info(paste("Removed the following singleton group(s) (N=1):\n",
-                          paste(" •", removed, collapse = "\n ")), call. = FALSE)
-        
-        # Filter data using clean group names
-        data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
-        
-        # Refit 
-        km_clean <- surv_fit(formula(fit), data = data_clean)
-        
-        return(km_clean)
-      }
-      return(fit)
+      # Refit 
+      km_clean <- surv_fit(formula(fit), data = data_clean)
+      
+      return(km_clean)
     }
+    return(fit)
+  }
+  
+  km_fit_clean <- filter_singleton_strata_refit(km_fit_comp, summary_table)
+  
+  # Titles and formatting 
+  title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
+  
+  group_rows <- logrank_table %>% 
+    filter(!!sym(grouping_var) != "Overall") 
+  
+  # Remove any rows where N = 1 
+  group_rows_clean <- group_rows %>%
+    filter(!str_detect(`N (events)`, "^1\\s*\\("))
+  
+  removed_groups <- group_rows %>%
+    filter(str_detect(`N (events)`, "^1\\s*\\(")) %>%
+    pull(1)
+  
+  if (length(removed_groups) > 0) {
+    logger.info(paste0("The following group(s) had N=1 and were removed from the table:\n • ",
+                       paste(removed_groups, collapse = "\n • ")), call. = FALSE)
+  }
+  
+  if (nrow(group_rows_clean == 1)){
+    logger.fatal("There is only one group left; unable to perform comparisons.")
     
-    km_fit_clean <- filter_singleton_strata_refit(km_fit_comp, summary_table)
-    
-    # Titles and formatting 
-    title_text <- paste0("Kaplan-Meier Survival Curve: ", grouping_var)
-    
-    group_rows <- logrank_table %>% 
-      filter(!!sym(grouping_var) != "Overall") 
-    
-    # Remove any rows where N = 1 
-    group_rows_clean <- group_rows %>%
-      filter(!str_detect(`N (events)`, "^1\\s*\\("))
-    
-    removed_groups <- group_rows %>%
-      filter(str_detect(`N (events)`, "^1\\s*\\(")) %>%
-      pull(1)
-    
-    if (length(removed_groups) > 0) {
-      logger.info(paste0("The following group(s) had N=1 and were removed from the table:\n • ",
-                         paste(removed_groups, collapse = "\n • ")), call. = FALSE)
-    }
-    
+  } else { 
     subtitle_text <- paste0(paste(sprintf("N_%s: %s", 
                                           group_rows_clean[[grouping_var]],
                                           group_rows_clean$`N (events)`),
@@ -1931,7 +1949,8 @@ rFunction = function(data,
            dpi = 300, 
            bg = "white")
   }
-  
-  # Pass original to the next app in the MoveApps workflow
-  return(data)
+}
+
+# Pass original to the next app in the MoveApps workflow
+return(data)
 } 
