@@ -10,6 +10,7 @@ library(forcats)
 library(tidyr)
 library(purrr) 
 library(viridis)
+library(ggpubr)
 
 # logger.fatal(), logger.error(), logger.warn(), logger.info(), logger.debug(), logger.trace()
 
@@ -34,13 +35,6 @@ rFunction = function(data,
   
   if(!is.null(animal_birth_hatch_year_table)){
     animal_birth_hatch_year_table <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year_table"))
-  }
-  
-  
-  ## Functions for saving plots -----------------------------------------------
-  
-  grid.draw.ggsurvplot <- function(x) {
-    survminer:::print.ggsurvplot(x, newpage = FALSE)
   }
   
   
@@ -668,10 +662,6 @@ rFunction = function(data,
   
   ## Subset based on condition (if selected) ----------------------------------
   
-  if(subset_condition_1 == subset_condition_2) {
-    logger.warn("Both subsetting conditions are the same.")
-  }
-  
   # SUBSET CONDITION 1 ---
   
   if (!is.null(subset_condition_1) && subset_condition_1 == "sex") {
@@ -1142,14 +1132,12 @@ rFunction = function(data,
                        expand = expansion(mult = c(0.01, 0.03)))
     
     # Save plot 
-    plot_height <- length(unique(yearly_survival$individual_id)) / 7
-    plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
+    #plot_height <- length(unique(yearly_survival$individual_id)) / 7
+    #plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
     
-    ggsave(filename = appArtifactPath("tracking_history.png"), 
+    ggexport(filename = appArtifactPath("tracking_history.png"), 
            plot = tracking_history, 
-           width = plot_width, 
-           height = plot_height,
-           units = "in",
+           #width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
     
@@ -1206,14 +1194,15 @@ rFunction = function(data,
               axis.text.y       = element_text(size = 11))
       
       # Save plot  
-      ggsave(filename = appArtifactPath("monthly_mortality.png"), 
+      ggexport(filename = appArtifactPath("monthly_mortality.png"), 
              plot = monthly_mort_plot, 
-             width = 10, height = 6, units = "in",
+             #width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
     }
-    
-  } else {
+  } 
+  
+  if(is.null(survival_yr_start)){
     
     deployment_summary <- yearly_survival |>
       distinct(individual_id,
@@ -1284,14 +1273,12 @@ rFunction = function(data,
                        expand      = expansion(mult = c(0.01, 0.03)))
     
     # Save plot 
-    plot_height <- length(unique(yearly_survival$individual_id)) / 7
-    plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
+    #plot_height <- length(unique(yearly_survival$individual_id)) / 7
+    #plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
     
-    ggsave(filename = appArtifactPath("tracking_history.png"), 
+    ggexport(filename = appArtifactPath("tracking_history.png"), 
            plot = tracking_history, 
-           width = plot_width, 
-           height = plot_height, 
-           units = "in",
+           #width = plot_width, height = plot_height, units = "in",
            dpi = 300, 
            bg = "white")
     
@@ -1352,7 +1339,7 @@ rFunction = function(data,
               axis.text.y = element_text(size = 11))
       
       # Save plot  
-      ggsave(filename = appArtifactPath("monthly_mortality.png"), 
+      ggexport(filename = appArtifactPath("monthly_mortality.png"), 
              plot = monthly_mort_plot, 
              width = 10, height = 6, units = "in",
              dpi = 300, 
@@ -1374,14 +1361,16 @@ rFunction = function(data,
     # Fit model 
     fitting_data <- summary_table
     km_fit <- survfit(Surv(entry_time_days, exit_time_days, mortality_event) ~ 1, 
-                      data = fitting_data)
+                      data = summary_table)
     
     # Data for life table 
     lt.length.out <- ceiling(max(summary_table$exit_time_days)/life_table_days)
     times <- round(seq(min(summary_table$entry_time_days), max(summary_table$exit_time_days), 
                        length.out = lt.length.out))
     
-  } else {
+  } 
+  
+  if(!is.null(survival_yr_start)) {
     
     # Warning for no mortality 
     if(sum(yearly_survival$mortality_event) == 0){
@@ -1390,93 +1379,93 @@ rFunction = function(data,
     
     # Fit model 
     fitting_data <- yearly_survival
-    km_fit <- survfit(Surv(days_at_risk, mortality_event) ~ 1, data = fitting_data)
+    km_fit <- survfit(Surv(days_at_risk, mortality_event) ~ 1, data = yearly_survival)
     
     # Data for life table 
     max_days <- max(yearly_survival$days_at_risk, na.rm = TRUE)
     lt.length.out <- ceiling(max_days / life_table_days) + 1   
     times <- round(seq(0, max_days, length.out = lt.length.out))
-    
-    # Generate life table ---
-    s <- summary(km_fit, times = times)
-    life_table <- data.frame(time_days        = s$time,
-                             n_risk           = s$n.risk,
-                             n_event          = s$n.event,
-                             survival_prob    = s$surv,
-                             std_err          = s$std.err,
-                             lower_95         = s$lower,
-                             upper_95         = s$upper)
-    
-    # Save 
-    write.csv(life_table, file = appArtifactPath("life_table.csv"), row.names = F)
-    
-    # Plot KM curve ---
-    n.ind <- nrow(fitting_data)
-    n.events <- nrow(fitting_data[fitting_data$mortality_event == 1,])
-    n.days <- as.numeric(summary(km_fit)$table["median"])
-    med <- survminer::surv_median(km_fit)
-    
-    km_curve <- ggsurvplot(
-      km_fit,
-      data = fitting_data,
-      title = "Kaplan-Meier Survival Curve",
-      subtitle = paste0("N = ", n.ind, ", Events = ", n.events, ", Median Survival = ", 
-                        med$median, " days"),
-      xlab = "Time (days)",
-      ylab = "Survival Probability",
-      risk.table = FALSE,
-      conf.int = TRUE,
-      censor.shape = "|",
-      censor.size = 3,
-      legend = "none",
-      pval = FALSE,
-      surv.median.line = "hv",        
-      palette = c("#E69F00", "#56B4E9"),
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title         = element_text(face = "bold", size = 14), 
-              plot.subtitle      = element_text(size = 12, color = "gray50"),
-              axis.text          = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              line               = element_line(linewidth = 0.1),
-              plot.margin        = margin(10, 10, 10, 10)))
-    
-    # Save plot 
-    ggsave(filename = appArtifactPath("km_survival_curve.png"), 
+  }
+
+  # Generate life table ---
+  s <- summary(km_fit, times = times)
+  life_table <- data.frame(time_days        = s$time,
+                           n_risk           = s$n.risk,
+                           n_event          = s$n.event,
+                           survival_prob    = s$surv,
+                           std_err          = s$std.err,
+                           lower_95         = s$lower,
+                           upper_95         = s$upper)
+  
+  # Save 
+  write.csv(life_table, file = appArtifactPath("life_table.csv"), row.names = F)
+  
+  # Plot KM curve ---
+  n.ind <- nrow(fitting_data)
+  n.events <- nrow(fitting_data[fitting_data$mortality_event == 1,])
+  n.days <- as.numeric(summary(km_fit)$table["median"])
+  med <- survminer::surv_median(km_fit)
+  
+  km_curve <- ggsurvplot(
+    km_fit,
+    data = fitting_data,
+    title = "Kaplan-Meier Survival Curve",
+    subtitle = paste0("N = ", n.ind, ", Events = ", n.events, ", Median Survival = ", 
+                      med$median, " days"),
+    xlab = "Time (days)",
+    ylab = "Survival Probability",
+    risk.table = FALSE,
+    conf.int = TRUE,
+    censor.shape = "|",
+    censor.size = 3,
+    legend = "none",
+    pval = FALSE,
+    surv.median.line = "hv",        
+    palette = c("#E69F00", "#56B4E9"),
+    ggtheme = theme_classic(base_size = 12) + 
+      theme(plot.title         = element_text(face = "bold", size = 14), 
+            plot.subtitle      = element_text(size = 12, color = "gray50"),
+            axis.text          = element_text(color = "black"),
+            panel.grid.major.y = element_line(color = "gray90"), 
+            panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.5),
+            line               = element_line(linewidth = 0.1),
+            plot.margin        = margin(10, 10, 10, 10)))
+  
+  # Save plot 
+  ggexport(filename = appArtifactPath("km_survival_curve.png"), 
            plot = km_curve, 
-           width = 10, height = 6, units = "in",
+           #width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
-    
-    # Plot cumulative hazard curve --- 
-    cum_hazard <- ggsurvplot(
-      km_fit,
-      fun = "cumhaz",
-      conf.int = TRUE,
-      risk.table = FALSE,
-      cumevents = FALSE,                 
-      pval = FALSE,                     
-      xlab = "Time (days)",
-      ylab = "Cumulative Hazard",
-      title = "Cumulative Hazard",
-      subtitle = paste0("N = ", n.ind, ", Events = ", n.events), 
-      palette = c("#E69F00", "#56B4E9"),
-      legend = "none",
-      ggtheme = theme_classic(base_size = 12) + 
-        theme(plot.title   = element_text(face = "bold", size = 14), 
-              plot.subtitle = element_text(size = 12, color = "gray50"),
-              axis.text    = element_text(color = "black"),
-              panel.grid.major.y = element_line(color = "gray90"), 
-              panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
-              plot.margin  = margin(10, 10, 10, 10)))
-    
-    # Save plot 
-    ggsave(filename = appArtifactPath("cumulative_hazard_plot.png"), 
+  
+  # Plot cumulative hazard curve --- 
+  cum_hazard <- ggsurvplot(
+    km_fit,
+    fun = "cumhaz",
+    conf.int = TRUE,
+    risk.table = FALSE,
+    cumevents = FALSE,                 
+    pval = FALSE,                     
+    xlab = "Time (days)",
+    ylab = "Cumulative Hazard",
+    title = "Cumulative Hazard",
+    subtitle = paste0("N = ", n.ind, ", Events = ", n.events), 
+    palette = c("#E69F00", "#56B4E9"),
+    legend = "none",
+    ggtheme = theme_classic(base_size = 12) + 
+      theme(plot.title   = element_text(face = "bold", size = 14), 
+            plot.subtitle = element_text(size = 12, color = "gray50"),
+            axis.text    = element_text(color = "black"),
+            panel.grid.major.y = element_line(color = "gray90"), 
+            panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+            plot.margin  = margin(10, 10, 10, 10)))
+  
+  # Save plot 
+  ggexport(filename = appArtifactPath("cumulative_hazard_plot.png"), 
            plot = cum_hazard, 
-           width = 10, height = 6, units = "in",
+           #width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
-  } 
   
   
   ## Survival Analysis: Group comparisons -------------------------------------
@@ -1626,7 +1615,7 @@ rFunction = function(data,
                                     title.position = "top"))
       
       # Save plot 
-      ggsave(filename = appArtifactPath("km_comparison_curves.png"), 
+      ggexport(filename = appArtifactPath("km_comparison_curves.png"), 
              plot = km_comp_curve, 
              width = 10, height = 6, units = "in",
              dpi = 300, 
@@ -1689,7 +1678,7 @@ rFunction = function(data,
                                     title.position = "top"))
       
       # Save plot  
-      ggsave(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
+      ggexport(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
              plot = cum_hazard_comp, 
              width = 10, height = 6, units = "in",
              dpi = 300, 
@@ -1855,7 +1844,7 @@ rFunction = function(data,
                                     title.position = "top"))
       
       # Save plot 
-      ggsave(filename = appArtifactPath("km_comparison_curves.png"), 
+      ggexport(filename = appArtifactPath("km_comparison_curves.png"), 
              plot = km_comp_curve, 
              width = 10, height = 6, units = "in",
              dpi = 300, 
@@ -1918,7 +1907,7 @@ rFunction = function(data,
                                     title.position = "top"))
       
       # Save plot 
-      ggsave(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
+      ggexport(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
              plot = cum_hazard_comp, 
              width = 10, height = 6, units = "in",
              dpi = 300, 

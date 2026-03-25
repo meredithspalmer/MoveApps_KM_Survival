@@ -224,7 +224,8 @@
       {"name": "forecats"}, 
       {"name": "tidyr"}, 
       {"name": "purrr"}, 
-      {"name": "viridis"}
+      {"name": "viridis"}, 
+      {"name": "ggpubr"}
     ]
   },
   "license": {
