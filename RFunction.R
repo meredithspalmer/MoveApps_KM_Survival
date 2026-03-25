@@ -1157,7 +1157,6 @@ rFunction = function(data,
     # Calculate monthly mortality
     if(calc_month_mort == TRUE){
       
-      # Calculate monthly morts across entire defined study period 
       min_date <- min(summary_table$deploy_on_timestamp, na.rm = TRUE)
       max_date <- max(summary_table$deploy_off_timestamp, na.rm = TRUE)
       full_years <- seq(year(min_date), year(max_date), by = 1)
@@ -1299,10 +1298,15 @@ rFunction = function(data,
     
     # Calculate monthly mortality 
     if(calc_month_mort == TRUE){
+      
+      min_date <- min(yearly_survival$deploy_on_timestamp, na.rm = TRUE)
+      max_date <- max(yearly_survival$deploy_off_timestamp, na.rm = TRUE)
+      full_years <- seq(year(min_date), year(max_date), by = 1)
+      
       mortality_data <- yearly_survival |>
         filter(mortality_event == 1 | died_this_year == TRUE) |>
-        mutate(mort_date   = as.Date(mortality_date),                     
-               deploy_off  = as.Date(deploy_off_timestamp),               
+        mutate(mort_date   = as.Date(mortality_date),
+               deploy_off  = as.Date(deploy_off_timestamp),
                death_date  = coalesce(mort_date, deploy_off),
                death_year  = year(death_date),
                death_month = month(death_date, label = TRUE, abbr = TRUE),
@@ -1311,38 +1315,41 @@ rFunction = function(data,
       
       monthly_morts <- mortality_data |>
         count(death_year, death_month, name = "n_mortalities") |>
-        complete(death_year  = seq(min(death_year, na.rm = TRUE), max(death_year, na.rm = TRUE)),
-                 death_month = factor(month.abb, levels = month.abb, ordered = TRUE),
-                 fill = list(n_mortalities = 0)) |>
+        complete( death_year  = full_years,                                       
+                  death_month = factor(month.abb, levels = month.abb, ordered = TRUE),
+                  fill = list(n_mortalities = 0)) |>
         mutate(death_month_num = as.integer(death_month),
                death_month     = fct_relevel(death_month, month.abb))
       
-      monthly_mort_plot <- ggplot(monthly_morts, aes(x = death_month, y = factor(death_year), 
-                                                     fill = factor(n_mortalities))) +
+      # Plot 
+      monthly_mort_plot <- ggplot(monthly_morts, 
+                                  aes(x = death_month, 
+                                      y = factor(death_year),
+                                      fill = factor(n_mortalities))) +
         geom_tile(color = "white", linewidth = 0.5) +
-        scale_fill_viridis_d(option    = "magma", 
-                             direction = -1, 
-                             na.value  = "grey92", 
-                             name      = "Number of\nmortality events", 
-                             drop      = FALSE) +
+        scale_fill_viridis_d(option = "magma",
+                             direction = -1,
+                             na.value = "grey92",
+                             name = "Number of\nmortality events",
+                             drop = FALSE) +
         scale_x_discrete(position = "top") +
-        labs(title    = "Monthly Distribution of Confirmed Mortality Events",
+        labs(title = "Monthly Distribution of Confirmed Mortality Events",
              subtitle = paste0(
                "Total events: ", sum(monthly_morts$n_mortalities, na.rm = TRUE),
-               " • Time span: ", format(min(yearly_survival$deploy_on_timestamp, na.rm = TRUE), "%b %Y"),
-               " to ", format(max(yearly_survival$deploy_off_timestamp, na.rm = TRUE), "%b %Y")),
+               " • Time span: ", format(min_date, "%b %Y"),
+               " to ", format(max_date, "%b %Y")),
              x = NULL,
              y = "Year") +
         theme_minimal(base_size = 14) +
-        theme(panel.grid       = element_blank(),
-              axis.ticks       = element_blank(),
-              legend.position  = "right",
-              legend.title     = element_text(size = 11),
-              legend.text      = element_text(size = 10),
-              plot.title       = element_text(face = "bold", hjust = 0.5, size = 16),
-              plot.subtitle    = element_text(hjust = 0.5, size = 12),
-              axis.text.x      = element_text(size = 11, face = "bold"),
-              axis.text.y      = element_text(size = 11))
+        theme(panel.grid = element_blank(),
+              axis.ticks = element_blank(),
+              legend.position = "right",
+              legend.title = element_text(size = 11),
+              legend.text = element_text(size = 10),
+              plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+              plot.subtitle = element_text(hjust = 0.5, size = 12),
+              axis.text.x = element_text(size = 11, face = "bold"),
+              axis.text.y = element_text(size = 11))
       
       # Save plot  
       ggsave(filename = appArtifactPath("monthly_mortality.png"), 
