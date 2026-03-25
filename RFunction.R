@@ -1073,104 +1073,73 @@ rFunction = function(data,
   
   if(is.null(survival_yr_start)){
     
-    # Summarize per-deployment information
-    deployment_summary <- mt_track_data(data) |>
-      dplyr::select(deployment_id,
-                    individual_id,
-                    deploy_on  = deploy_on_timestamp,
-                    deploy_off = deploy_off_timestamp) |>
-      distinct() |>
-      mutate(deploy_on = as.POSIXct(deploy_on),
-             deploy_off     = as.POSIXct(deploy_off),
-             duration_days  = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
-      filter(deploy_off > deploy_on, !is.na(deploy_on), !is.na(deploy_off))
-    
-    has_time_filter <- !is.null(time_period_start) || !is.null(time_period_end)
-    
-    if (has_time_filter) {
-      t_start <- if (!is.na(time_period_start)) as.POSIXct(time_period_start) else min(deployment_summary$deploy_on, na.rm = TRUE)
-      t_end   <- if (!is.na(time_period_end))   as.POSIXct(time_period_end)   else max(deployment_summary$deploy_off, na.rm = TRUE)
+    # Create deployment summary 
+    deployment_summary <- summary_table |>
+      mutate(deploy_on  = as.POSIXct(deploy_on_timestamp),
+             deploy_off = as.POSIXct(deploy_off_timestamp),
+             duration_days = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
+      filter( deploy_off > deploy_on,
+              !is.na(deploy_on),
+              !is.na(deploy_off)) |>
       
-      deployment_summary <- deployment_summary |>
-        mutate(clip_start = pmax(deploy_on,  t_start, na.rm = TRUE),
-               clip_end   = pmin(deploy_off, t_end,   na.rm = TRUE)) |>
-        filter(clip_start < clip_end) |>
-        mutate(plot_start = clip_start,
-               plot_end   = clip_end)
-    } else { 
-      deployment_summary <- deployment_summary |>
-        mutate(plot_start = deploy_on,
-               plot_end   = deploy_off)
-    }
+      # Order individuals by their very first deployment
+      mutate(first_start = min(deploy_on),    
+             individual_label = fct_reorder(paste(individual_id, individual_local_identifier, sep = " – "),
+                                            first_start)) |>
+      arrange(first_start, deploy_on) |>
+      mutate(plot_start = deploy_on,
+             plot_end   = deploy_off)
     
-    # Sort by start date 
-    first_start <- deployment_summary |>
-      group_by(individual_id) |>
-      summarise(first_start = min(plot_start, na.rm = TRUE), .groups = "drop")
+    # Total location count  
+    n_locs_total <- summary_table |>
+      summarise(total = sum(n_locations, na.rm = TRUE)) |>
+      pull(total)
     
-    deployment_summary <- deployment_summary |>
-      left_join(first_start, by = "individual_id") |>
-      mutate(individual_label = fct_reorder(as.character(individual_id), first_start)) |>
-      arrange(first_start, plot_start)
+    # Gap detection (gaps > 30 days between deployments of the same individual)
+    deployment_summary_with_gaps <- deployment_summary |>
+      group_by(individual_label) |>
+      arrange(plot_start) |>
+      mutate(prev_end  = lag(plot_end),
+             gap_start = prev_end,
+             gap_end   = plot_start,
+             gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
+      filter(gap_days > 30, !is.na(gap_days)) |>
+      ungroup()
     
-    # Total location count 
-    n_locs_total <- if (exists("n_locations", mode = "function")) {
-      n_locations(data)
-    } else {
-      nrow(data)
-    }
-    
-    # Plot
-    title_suffix <- if (has_time_filter) {
-      paste0(" (", format(t_start, "%b %Y"), " – ", format(t_end, "%b %Y"), ")")
-    } else {
-      ""
-    }
-    
+    # Build the plot
     tracking_history <- ggplot(deployment_summary) +
       geom_segment(aes(x = plot_start, xend = plot_end,
                        y = individual_label, yend = individual_label),
-                   linewidth = 3.2,
-                   color = "grey") +
+                   linewidth = 3.2, color = "grey") +
       geom_point(aes(x = plot_start, y = individual_label),
-                 color = "#1F77B4", size = 3.5) +
+                 color = "#1F77B4", size = 3.5) +    
       geom_point(aes(x = plot_end, y = individual_label),
-                 color = "#9467BD", size = 3.5) +
-      geom_segment(data = deployment_summary |>
-                     group_by(individual_label) |>
-                     arrange(plot_start) |>
-                     mutate(
-                       prev_end  = lag(plot_end),
-                       gap_start = prev_end,
-                       gap_end   = plot_start,
-                       gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
-                     filter(gap_days > 30, !is.na(gap_days)),
-                   aes(x    = gap_start + (gap_end - gap_start)/2,
+                 color = "#9467BD", size = 3.5) +    
+      geom_segment(data = deployment_summary_with_gaps,
+                   aes(x = gap_start + (gap_end - gap_start)/2,
                        xend = gap_start + (gap_end - gap_start)/2,
-                       y    = as.numeric(individual_label),
+                       y = as.numeric(individual_label),
                        yend = as.numeric(individual_label) + 0.45),
-                   color     = "grey50",
-                   linewidth = 1.2,
-                   arrow     = arrow(length = unit(0.18, "cm"), type = "closed")) +
-      labs(title    = paste0("Individual Collared Periods", title_suffix),
+                   color = "grey50", linewidth = 1.2,
+                   arrow = arrow(length = unit(0.18, "cm"), type = "closed")) +
+      labs(title = "Individual Collared Periods",
            subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
                               n_distinct(deployment_summary$individual_id),
                               nrow(deployment_summary),
                               n_locs_total),
            x = "Time",
-           y = "Individual ID") +
+           y = "Individual") +
       theme_minimal(base_size = 12) +
-      theme(axis.text.y       = element_text(size = 8, face = "plain"),
+      theme(axis.text.y = element_text(size = 8, face = "plain"),
             panel.grid.major.y = element_blank(),
-            panel.grid.minor   = element_blank(),
-            plot.title        = element_text(face = "bold", size = 14),
-            plot.subtitle     = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
-            axis.text.x       = element_text(angle = 45, hjust = 1, vjust = 1),
-            axis.title        = element_text(size = 12)) +
-      scale_x_datetime(date_breaks  = "1 year",
-                       date_labels  = "%Y",
-                       expand       = expansion(mult = c(0.01, 0.03)),
-                       limits       = if (has_time_filter) c(t_start, t_end) else NULL)
+            panel.grid.minor = element_blank(),
+            plot.title = element_text(face = "bold", size = 14),
+            plot.subtitle = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
+            axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title = element_text(size = 12)) +
+      scale_x_datetime(date_breaks = "1 year",
+                       date_labels = "%Y",
+                       expand = expansion(mult = c(0.01, 0.03)))
     
     # Save plot 
     plot_height <- length(unique(yearly_survival$individual_id)) / 7
