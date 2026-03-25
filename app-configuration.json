@@ -1,7 +1,7 @@
 {
    "time_period_start"             : null,
    "time_period_end".              : null, 
-   "censor_capture_mortality"      : 2, #integer or character? 
+   "censor_capture_mortality"      : 2, 
    "fix_na_start_times"            : "timestamp", 
    "fix_na_end_times"              : "timestamp",  
    "subset_condition_1"            : "sex",
@@ -9,8 +9,8 @@
    "subset_condition_2"            : "sex",
    "subset_condition_define_2"     : "f", 
    "group_comparison_individual"   : "model",
-   "survival_yr_start"             : "2016-06-01",   AS DATE 
+   "survival_yr_start"             : 2016-06-01T00:00:00Z,
    "animal_birth_hatch_year_table" : null, 
-   "life_table_days"               : 30, #integer or character? 
+   "life_table_days"               : 30, 
    "calc_month_mort"               : false
 }

@@ -176,7 +176,7 @@
     {
       "id": "survival_yr_start",
       "name": "Survival year start",
-      "description": "If comparing across survival years, select the start date of your survival year. Note that what is important is the day and month; year is irrelevant.",
+      "description": "If comparing across survival years, select the start date of your survival year. Note that what is important is the day and month; year must be entered but is irrelevant.",
       "defaultValue": null,
       "type": "INSTANT"
     },
