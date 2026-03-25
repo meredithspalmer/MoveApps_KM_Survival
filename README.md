@@ -8,15 +8,11 @@ https://github.com/meredithspalmer/MoveApps_Survival
 
 Perform basic Kaplan-Meier survival analyses and optional group comparisons via the log-rank test.
 
-These analyses can be peformed across an entire dataset, within defined time periods, or for survival years. 
+These analyses can be performed across an entire dataset, within defined time periods, and/or across data subsets. 
 
 ## Documentation
 
-This app implements fundamental Kaplan-Meier (KM) survival estimation functions. It produces life tables, survival curves, cumulative hazard plots, and, if applicable, statistical comparisons of per-group survival estimation for different attributes (sex, survival year, attachment type or model, etc.). 
-
-Data can be subset based on specific variables (e.g., only females) - this then allows the users to perform comparsions within this group (e.g., comparing survival of females with different collar types). Users can also enter additional information on survival years and animal life stages for comparison across these variables. 
-
-Users define a study period, can censor data to exclude post-capture mortality events, and specify how to handle missing time-stamp information. 
+This app implements fundamental Kaplan-Meier (KM) survival estimation functions. It produces life tables, survival curves, cumulative hazard plots, and, if applicable, statistical comparisons of per-group survival estimation for different attributes (sex, survival year, life stage, attachment type, or model). 
 
 **Kaplan-Meier Survival Estimation:** The KM estimator is a non-parametric method used to estimate the survival function, that is, the probability that an individual survives past time t, from lifetime data. This analysis allows for:
 - *Right-censoring*, where the exact time of death is unknown for some individuals because they are still alive at the end of the study period, lost to follow-up (e.g., collar failure), or exit the study period alive for other reasons. 
@@ -28,17 +24,19 @@ Users define a study period, can censor data to exclude post-capture mortality e
 
 **Log-rank Test:** Users can request log-rank tests (Mantel–Cox test) to compare survival distributions across groups. The log-rank test assesses whether there are statistically significant differences in survival between two or more independent groups. Currently supported grouping variables are: sex, life stage, reproductive condition, or tag/collar attachment type. 
 
-**Survival year**: Users have the option define survival years. If a user wishes to compare survival across survival years, enter the survival year start and select 'survival year' as a grouping variable. To compare survival of different classes (e.g., ages, sexes) within a specific survival year, subset the data by a specific survival year and select the class of interest as the grouping variable. 
-- *Life stages*: If data is processed by survival year, users can then optionally define life stages that progress through time. Users can then subset data by a specific life stage or compare survival of different life stages within the same survival year. 
-
 **Mortality plots**: Users have the option to generate diagnostic plots showing monthly mortality across the study period. 
 
+Data subsetting: 
+- Data can be subset up to two times based on specific variables (e.g., only females or only adult females) - this then allows the users to perform comparisons within this smaller subset (e.g., comparing survival of adult females with different collar types). 
+- Users can also enter additional information defining survival years and animal life stages for comparison across these variables. For life stages, data must contain the column "animal_birth_hatch_year" and a data frame mapping age to life stage must be uploaded. 
+- Furthermore, users can define a study period, censor data to exclude post-capture mortality events, and specify how to handle missing time-stamp information. 
 
 Data pre-processing includes:  
 - Removing or updating empty or invalid data (according to user specification)
 - Flagging and handling marked outliers and test data  
 - Checking for logical errors (e.g., start date after end date)  
-- Subsetting data to study period or select individuals (according to user specification)
+- Subsetting data to defined study period 
+- Subsetting data based on attributes according to user specifications
 
 The app then summarizes the data into a per-individual table and figure containing:  
 - Duration within the study period (accounting for staggered entry and censoring)  
@@ -60,7 +58,7 @@ When group comparison is enabled, the app additionally produces:
 
 #### Generality of App usability
 
-This app has currently been tested on mammals and birds with N_individuals > 50, N_deaths > 5, and study duration >1 year, but should be applicable to any dataset containing mortality data of sufficient sample size (see below). 
+This app has currently been tested on mammals and birds with N_individuals > 50, N_deaths > 1, and study duration >1 year, but should be applicable to any dataset containing mortality data of sufficient sample size (see below). 
 
 This app allows for staggered entry during the defined study period and for censored data (individuals that are "lost" from the study, e.g., due to equipment failure and individuals that survive the study period). 
 
@@ -69,7 +67,7 @@ This app allows for staggered entry during the defined study period and for cens
 
 **Events**: This app can only be used if mortality information (indication of event along with an associated end date) is captured in one of the following columns: death_comments, deployment_end_comments, deployment_end_type, mortality_location_filled. 
 
-The app will produce a warning and terminate if none of the individuals in the study experienced a mortality event during the study period. 
+The app will produce a warning and terminate if none of the individuals in the study experienced a mortality event during the study period or data subset. 
 
 **Sample size**: The required sample size for a KM survival analysis depends primarily on the total number of deaths, rather than the total number of individuals. In general, the lower the event (death) rate, the higher the number of required individuals. 
 
@@ -77,11 +75,11 @@ This app does *not* perform a power analysis prior to performing the survival an
 
 Note that a larger sample size is required for comparison across groups. 
 
-**Subsetting data**: Users can select what subset of individuals to include in the study (only females, only individuals alive within a specific survival year, individuals wearing certain collar types, etc.).
+**Subsetting data**: Users can select what subset of individuals to include in the study (only females, only individuals alive within a specific survival year, individuals wearing certain collar types, etc.). Data can be subset based on up to two attributes. 
 
-**Comparison types**: This app enables the user to select one of four grouping options to compare across. These currently include sex, life stage, tag attachment type, and tag model. These grouping classifications are cleaned and standardized for capitalization and white-space errors (e.g., "male" and "Male" will register as the same class) but note that other misspecifications (e.g., "male " vs. "M") will calculate as separate groups. 
+**Comparison types**: This app enables the user to select one of four grouping options to compare across. These currently include sex, life stage, survival year, tag attachment type, and tag model. These grouping classifications are cleaned and standardized for capitalization and white-space errors (e.g., "male" and "Male" will register as the same class) but note that other misspecifications (e.g., "male " vs. "M") will calculate as separate groups. 
 
-**Survival years**: Users can define a "survival year" for analyses, different from a calendar year in that this period extends from when an animal is typically born to the end of their first year, etc.  
+**Survival years**: Users can define a "survival year" for analyses, different from a calendar year in that this period extends from when an animal is typically born to the end of their first year.  
 
 **Life stages**: If the user wants to calculate life stage, the input data must contain the column "animal_birth_hatch_year". Users must also upload auxiliary information (see template: https://github.com/meredithspalmer/MoveApps_Survival/blob/master/animal_birth_hatch_year_table.csv) that links individual animal ages to species-specific life stages. 
 
@@ -101,7 +99,7 @@ Note that a larger sample size is required for comparison across groups.
 
 *Life table:* Output of KM survival analysis; table (`life_table.csv`) with the time, number of individuals at risk, number of events, survival, standard error, and upper/lower 95% confidence intervals.
 
-*Mortality plot:* Optional diagnostic plot depicting mortality rate per month across the study period. 
+*Mortality plot:* Optional diagnostic plot (`monthly_mortality.png`) depicting mortality rate per month across the study period. 
 
 *KM survival curve:* Plot (`km_survival_curve.png`), depicting survival over time with median survival time indicated. User can select whether plot includes risk and cumulative events tables. 
 
@@ -125,7 +123,7 @@ Note that a larger sample size is required for comparison across groups.
 
 `Censor capture-related mortality`: If capture-related mortality is a concern, this setting allows users to define a number of days post-capture to exclude from the overall analysis. Default is no censoring. Unit: `days`. 
 
-`Perform analysis on subset of data` and `Define subset condition`: If user wants to perform analyses on a subset of the data, user can define the grouping parameter they want to split the data on (subset condition; e.g., "sex") and the group of interest they wish to retain in the study (subset definition; e.g., "f"). Default setting is to include all data. 
+`Perform analysis on subset of data` and `Define subset condition`: If user wants to perform analyses on a subset of the data, user can define the grouping parameter they want to split the data on (subset condition; e.g., "sex") and the group of interest they wish to retain in the study (subset definition; e.g., "f"). Default setting is to include all data. There are up to two subsets users can define. 
 
 `Groups for comparison`: If interested in comparing across groups, this identifies the grouping variable. Default is no group comparisons. Options currently include: 
 - Sex
