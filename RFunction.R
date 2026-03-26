@@ -1478,6 +1478,7 @@ rFunction = function(data,
   # Plot cumulative hazard curve --- 
   cum_hazard <- ggsurvplot(
     km_fit,
+    data = fitting_data,
     fun = "cumhaz",
     conf.int = TRUE,
     risk.table = FALSE,
