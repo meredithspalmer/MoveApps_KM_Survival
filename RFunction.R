@@ -1163,10 +1163,14 @@ rFunction = function(data,
                        expand = expansion(mult = c(0.01, 0.03)))
     
     # Save 
-    ggexport(filename = appArtifactPath("tracking_history.png"), 
-           plot = tracking_history, 
-           dpi = 300, 
-           bg = "white")
+    png(appArtifactPath("tracking_history.png"))
+    tracking_history
+    dev.off()
+    
+    #ggexport(filename = appArtifactPath("tracking_history.png"), 
+    #       plot = tracking_history, 
+    #       dpi = 300, 
+    #       bg = "white")
     
     
     # Calculate monthly mortality
@@ -1221,10 +1225,9 @@ rFunction = function(data,
               axis.text.y       = element_text(size = 11))
       
       # Save plot  
-      ggexport(filename = appArtifactPath("monthly_mortality.png"), 
-             plot = monthly_mort_plot, 
-             dpi = 300, 
-             bg = "white")
+      png(appArtifactPath("monthly_mortality.png"))
+      monthly_mort_plot
+      dev.off()
       
     } else{
         # Do nothing
