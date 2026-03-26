@@ -1514,6 +1514,7 @@ rFunction = function(data,
   
   # For yearly_summary data 
   if (!is.null(group_comparison_individual) && !is.null(survival_yr_start)){
+    logger.info(paste0("Comparing ", group_comparison_individual, " using yearly survival data"))
     
     # Update headings if necessary
     if(group_comparison_individual == "lifestage"){group_comparison_individual <- "animal_life_stage_new"}
@@ -1718,7 +1719,8 @@ rFunction = function(data,
   } 
   
   # For summary table data 
-  else if(!is.null(group_comparison_individual) && is.null(survival_yr_start)) {
+  if(!is.null(group_comparison_individual) && is.null(survival_yr_start)) {
+    logger.info(paste0("Comparing ", group_comparison_individual, " using summary table data"))
     
     # Fit survival object ---
     summary_table$time_at_risk <- summary_table$exit_time_days - summary_table$entry_time_days
