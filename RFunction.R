@@ -203,9 +203,8 @@ rFunction = function(data,
         sprintf("Warning: Replaced %d missing deploy_on_timestamp value%s with first_timestamp.",
                 n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
-  }
-  
-  if(fix_na_start_times == "remove"){
+    
+  } else if (fix_na_start_times == "remove"){
     n_missing <- sum(is.na(summary_table$deploy_on_timestamp))
     summary_table <- summary_table %>% filter(!is.na(deploy_on_timestamp))
     
@@ -213,6 +212,9 @@ rFunction = function(data,
       logger.info(sprintf("Warning: Removed %d deploy_on_timestamp value%s that were NA.", n_missing,
                           if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
+    
+  } else {
+    # do nothing - should be no other options 
   }
   
   # End times 
@@ -233,9 +235,8 @@ rFunction = function(data,
         sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with last_timestamp.", 
                 n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
-  }
-  
-  if(fix_na_end_times == "systime"){
+    
+  } else if (fix_na_end_times == "systime"){
     summary_table <- summary_table %>%
       mutate(missing_timestamp_end = is.na(deploy_off_timestamp))
     n_missing <- sum(is.na(summary_table$deploy_off_timestamp), na.rm = TRUE)
@@ -251,9 +252,8 @@ rFunction = function(data,
       logger.info(sprintf("Warning: Replaced %d missing deploy_off_timestamp value%s with current date.",
                           n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
-  }
-  
-  if(fix_na_end_times == "remove"){
+    
+  } else if (fix_na_end_times == "remove"){
     n_missing <- sum(is.na(is.na(summary_table$deploy_off_timestamp)))
     summary_table <- summary_table %>% filter(!is.na(deploy_off_timestamp))
     
@@ -262,6 +262,9 @@ rFunction = function(data,
         sprintf("Warning: Removed %d deploy_off_timestamp and/or deploy_on_timestamp value%s that were NA.", 
                 n_missing, if (n_missing == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
+    
+  } else {
+    # do nothing - should be no other options 
   }
   
   # Remove data for individuals where "deploy_off_timestamp" occurs before "deploy_on_timestamp" 
@@ -298,6 +301,9 @@ rFunction = function(data,
       logger.info(paste0("Warning: Removed ", n_removed, " individual(s) because deploy_off_timestamp occurred within ", censor_capture_mortality, " day(s) after deploy_on_timestamp"),
                   call. = FALSE, immediate. = TRUE)
     } 
+    
+  } else {
+    # do nothing
   }
   
   # Crop to study period of interest 
@@ -343,6 +349,8 @@ rFunction = function(data,
         sprintf("Warning: %d record%s did not overlap the user-defined study window and were removed.",
                 n_removed, if (n_removed == 1) "" else "s"), call. = FALSE, immediate. = TRUE)
     }
+  } else {
+    # do nothing  
   }
   
   
@@ -610,6 +618,9 @@ rFunction = function(data,
       
       # Final cleaning
       arrange(individual_id, survival_year)
+    
+  } else {
+    # do nothing 
   }
   
   
@@ -657,7 +668,10 @@ rFunction = function(data,
                  pull(animal_life_stage) %>%
                  first(default = "adult"))) %>% 
       select(-matched_threshold)
-  }
+  
+    } else {
+      # do nothing
+    }
   
   
   ## Subset based on condition (if selected) ----------------------------------
@@ -672,7 +686,7 @@ rFunction = function(data,
     }
   }
   
-  if (!is.null(subset_condition_1) && subset_condition_1 == "attachment_type") {
+  else if (!is.null(subset_condition_1) && subset_condition_1 == "attachment_type") {
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(attachment_type == subset_condition_define_1)
     } else {
@@ -680,7 +694,7 @@ rFunction = function(data,
     }
   } 
   
-  if (!is.null(subset_condition_1) && subset_condition_1 == "model") {
+  else if (!is.null(subset_condition_1) && subset_condition_1 == "model") {
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(model == subset_condition_define_1) 
     } else {
@@ -688,7 +702,7 @@ rFunction = function(data,
     }
   } 
   
-  if (!is.null(subset_condition_1) && subset_condition_1 == "lifestage") {
+  else if (!is.null(subset_condition_1) && subset_condition_1 == "lifestage") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
@@ -697,13 +711,17 @@ rFunction = function(data,
     }
   } 
   
-  if (!is.null(subset_condition_1) && subset_condition_1 == "survival_year") {
+  else if (!is.null(subset_condition_1) && subset_condition_1 == "survival_year") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
     } else {
       yearly_survival <- yearly_survival %>% filter(survival_year == as.integer(subset_condition_define_1))
     }
+  } 
+  
+  else {
+    #Do nothing 
   }
   
   if(!is.null(subset_condition_1)){
@@ -725,7 +743,7 @@ rFunction = function(data,
     }
   }
   
-  if (!is.null(subset_condition_2) && subset_condition_2 == "attachment_type") {
+  else if (!is.null(subset_condition_2) && subset_condition_2 == "attachment_type") {
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(attachment_type == subset_condition_define_2)
     } else {
@@ -733,7 +751,7 @@ rFunction = function(data,
     }
   } 
   
-  if (!is.null(subset_condition_2) && subset_condition_2 == "model") {
+  else if (!is.null(subset_condition_2) && subset_condition_2 == "model") {
     if (is.null(survival_yr_start)) {
       summary_table <- summary_table %>% filter(model == subset_condition_define_2) 
     } else {
@@ -741,7 +759,7 @@ rFunction = function(data,
     }
   } 
   
-  if (!is.null(subset_condition_2) && subset_condition_2 == "lifestage") {
+  else if (!is.null(subset_condition_2) && subset_condition_2 == "lifestage") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
@@ -750,13 +768,17 @@ rFunction = function(data,
     }
   } 
   
-  if (!is.null(subset_condition_2) && subset_condition_2 == "survival_year") {
+  else if (!is.null(subset_condition_2) && subset_condition_2 == "survival_year") {
     if (is.null(survival_yr_start)) {
       logger.error("This subset only makes sense when data are processed by survival year. 
                    Please enter survival year start date.")
     } else {
       yearly_survival <- yearly_survival %>% filter(survival_year == as.integer(subset_condition_define_2))
     }
+  }
+  
+  else {
+    # Do nothing
   }
   
   if(!is.null(subset_condition_2)){
@@ -834,7 +856,7 @@ rFunction = function(data,
     }
   }
   
-  if(!is.null(group_comparison_individual) && group_comparison_individual == "lifestage"){
+  else if(!is.null(group_comparison_individual) && group_comparison_individual == "lifestage"){
     
     if(is.null(survival_yr_start)){ 
       logger.error("This comparison only makes sense if survival years are defined.")
@@ -871,7 +893,7 @@ rFunction = function(data,
     }
   }
   
-  if(!is.null(group_comparison_individual) && group_comparison_individual == "model"){
+  else if(!is.null(group_comparison_individual) && group_comparison_individual == "model"){
     
     if(is.null(survival_yr_start)){
       
@@ -945,7 +967,7 @@ rFunction = function(data,
     } 
   }
   
-  if(!is.null(group_comparison_individual) && group_comparison_individual == "attachment"){
+  else if(!is.null(group_comparison_individual) && group_comparison_individual == "attachment"){
     
     if(is.null(survival_yr_start)){
       
@@ -1019,7 +1041,7 @@ rFunction = function(data,
     } 
   }
   
-  if(!is.null(group_comparison_individual) && group_comparison_individual == "survival_year"){
+  else if(!is.null(group_comparison_individual) && group_comparison_individual == "survival_year"){
     
     if(is.null(survival_yr_start)){ 
       logger.error("This comparison only makes sense if survival years are defined.")
@@ -1056,36 +1078,45 @@ rFunction = function(data,
     }
   }  
   
+  else {
+    logger.info("No grouping attribute defined.")
+  }
+  
   
   ## Basic summaries of data ------------------------------------------------
   
   # Plot each individual's tracking history --- 
   
-  if(is.null(survival_yr_start)){
+  if (is.null(survival_yr_start)) {
     
-    # Create deployment summary 
+    # Create deployment summary
     deployment_summary <- summary_table |>
       mutate(deploy_on  = as.POSIXct(deploy_on_timestamp),
              deploy_off = as.POSIXct(deploy_off_timestamp),
              duration_days = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
-      filter( deploy_off > deploy_on,
-              !is.na(deploy_on),
-              !is.na(deploy_off)) |>
       
-      # Order individuals by their very first deployment
-      mutate(first_start = min(deploy_on),    
-             individual_label = fct_reorder(paste(individual_id, individual_local_identifier, sep = " – "),
-                                            first_start)) |>
+      filter(deploy_off > deploy_on,
+             !is.na(deploy_on),
+             !is.na(deploy_off)) |>
+      
+      group_by(individual_id, individual_local_identifier) |>          
+      mutate(first_start = min(deploy_on, na.rm = TRUE) ) |>
+      ungroup() |>
+      
+      mutate(individual_label = fct_reorder(
+        paste(individual_id, individual_local_identifier, sep = " – "),
+        first_start)) |>
+      
       arrange(first_start, deploy_on) |>
       mutate(plot_start = deploy_on,
              plot_end   = deploy_off)
     
-    # Total location count  
+    # Total location count
     n_locs_total <- summary_table |>
       summarise(total = sum(n_locations, na.rm = TRUE)) |>
       pull(total)
     
-    # Gap detection (gaps > 30 days between deployments of the same individual)
+    # Gap detection
     deployment_summary_with_gaps <- deployment_summary |>
       group_by(individual_label) |>
       arrange(plot_start) |>
@@ -1096,15 +1127,15 @@ rFunction = function(data,
       filter(gap_days > 30, !is.na(gap_days)) |>
       ungroup()
     
-    # Build the plot
+    # Build the plot  
     tracking_history <- ggplot(deployment_summary) +
       geom_segment(aes(x = plot_start, xend = plot_end,
                        y = individual_label, yend = individual_label),
                    linewidth = 3.2, color = "grey") +
       geom_point(aes(x = plot_start, y = individual_label),
-                 color = "#1F77B4", size = 3.5) +    
+                 color = "#1F77B4", size = 3.5) +
       geom_point(aes(x = plot_end, y = individual_label),
-                 color = "#9467BD", size = 3.5) +    
+                 color = "#9467BD", size = 3.5) +
       geom_segment(data = deployment_summary_with_gaps,
                    aes(x = gap_start + (gap_end - gap_start)/2,
                        xend = gap_start + (gap_end - gap_start)/2,
@@ -1131,19 +1162,15 @@ rFunction = function(data,
                        date_labels = "%Y",
                        expand = expansion(mult = c(0.01, 0.03)))
     
-    # Save plot 
-    #plot_height <- length(unique(yearly_survival$individual_id)) / 7
-    #plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
-    
+    # Save 
     ggexport(filename = appArtifactPath("tracking_history.png"), 
            plot = tracking_history, 
-           #width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
     
     
     # Calculate monthly mortality
-    if(calc_month_mort == TRUE){
+    if (calc_month_mort == TRUE) {
       
       min_date <- min(summary_table$deploy_on_timestamp, na.rm = TRUE)
       max_date <- max(summary_table$deploy_off_timestamp, na.rm = TRUE)
@@ -1196,13 +1223,15 @@ rFunction = function(data,
       # Save plot  
       ggexport(filename = appArtifactPath("monthly_mortality.png"), 
              plot = monthly_mort_plot, 
-             #width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
-    }
-  } 
+      
+    } else{
+        # Do nothing
+    } 
+  }
   
-  if(is.null(survival_yr_start)){
+  else if (!is.null(survival_yr_start)) {
     
     deployment_summary <- yearly_survival |>
       distinct(individual_id,
@@ -1272,19 +1301,14 @@ rFunction = function(data,
                        date_labels = "%Y",
                        expand      = expansion(mult = c(0.01, 0.03)))
     
-    # Save plot 
-    #plot_height <- length(unique(yearly_survival$individual_id)) / 7
-    #plot_width  <- as.integer(max(deployment_summary$deploy_off_timestamp) - min(deployment_summary$deploy_on_timestamp)) / 100
-    
     ggexport(filename = appArtifactPath("tracking_history.png"), 
            plot = tracking_history, 
-           #width = plot_width, height = plot_height, units = "in",
            dpi = 300, 
            bg = "white")
     
-    
+  
     # Calculate monthly mortality 
-    if(calc_month_mort == TRUE){
+    if (calc_month_mort == TRUE) {
       
       min_date <- min(yearly_survival$deploy_on_timestamp, na.rm = TRUE)
       max_date <- max(yearly_survival$deploy_off_timestamp, na.rm = TRUE)
@@ -1344,14 +1368,19 @@ rFunction = function(data,
              width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
+    } else {
+      # Do nothing 
     }
+    
+  } else {
+    logger.fatal("There is an issue.")
   }
-  
+   
   
   
   ## Survival Analysis: No comparisons ----------------------------------------
   
-  if(is.null(survival_yr_start)){
+  if (is.null(survival_yr_start)) {
     
     # Warning for not mortality 
     if(sum(summary_table$mortality_event) > 0){
@@ -1368,9 +1397,7 @@ rFunction = function(data,
     times <- round(seq(min(summary_table$entry_time_days), max(summary_table$exit_time_days), 
                        length.out = lt.length.out))
     
-  } 
-  
-  if(!is.null(survival_yr_start)) {
+  } else {
     
     # Warning for no mortality 
     if(sum(yearly_survival$mortality_event) == 0){
@@ -1434,7 +1461,6 @@ rFunction = function(data,
   # Save plot 
   ggexport(filename = appArtifactPath("km_survival_curve.png"), 
            plot = km_curve, 
-           #width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
   
@@ -1463,7 +1489,6 @@ rFunction = function(data,
   # Save plot 
   ggexport(filename = appArtifactPath("cumulative_hazard_plot.png"), 
            plot = cum_hazard, 
-           #width = 10, height = 6, units = "in",
            dpi = 300, 
            bg = "white")
   
@@ -1617,7 +1642,7 @@ rFunction = function(data,
       # Save plot 
       ggexport(filename = appArtifactPath("km_comparison_curves.png"), 
              plot = km_comp_curve, 
-             width = 10, height = 6, units = "in",
+             #width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
       
@@ -1680,14 +1705,14 @@ rFunction = function(data,
       # Save plot  
       ggexport(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
              plot = cum_hazard_comp, 
-             width = 10, height = 6, units = "in",
+             #width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
     }
   } 
   
   # For summary table data 
-  if(!is.null(group_comparison_individual) && is.null(survival_yr_start)) {
+  else if(!is.null(group_comparison_individual) && is.null(survival_yr_start)) {
     
     # Fit survival object ---
     summary_table$time_at_risk <- summary_table$exit_time_days - summary_table$entry_time_days
@@ -1846,7 +1871,7 @@ rFunction = function(data,
       # Save plot 
       ggexport(filename = appArtifactPath("km_comparison_curves.png"), 
              plot = km_comp_curve, 
-             width = 10, height = 6, units = "in",
+             #width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
       
@@ -1909,10 +1934,14 @@ rFunction = function(data,
       # Save plot 
       ggexport(filename = appArtifactPath("cum_hazard_comparison_plot.png"), 
              plot = cum_hazard_comp, 
-             width = 10, height = 6, units = "in",
+             #width = 10, height = 6, units = "in",
              dpi = 300, 
              bg = "white")
     }
+  }
+  
+  else {
+    # Do nothing
   }
   
   # Pass original to the next app in the MoveApps workflow
