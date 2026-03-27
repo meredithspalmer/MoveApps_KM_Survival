@@ -221,7 +221,6 @@
       {"name": "lubridate"},
       {"name": "stringr"},
       {"name": "sf"},
-      {"name": "forecats"}, 
       {"name": "tidyr"}, 
       {"name": "purrr"}, 
       {"name": "viridis"}, 
