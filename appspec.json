@@ -224,7 +224,7 @@
       {"name": "tidyr"}, 
       {"name": "purrr"}, 
       {"name": "viridis"}, 
-      {"name": "ggpubr"}
+      {"remotes": "install_git('https://github.com/tidyverse/forcats.git')"}
     ]
   },
   "license": {
