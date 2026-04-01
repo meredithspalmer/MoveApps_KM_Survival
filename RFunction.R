@@ -976,14 +976,14 @@ rFunction = function(data,
     } 
   }
   
-  if(!is.null(group_comparison_individual) && group_comparison_individual == "attachment"){
+  if(!is.null(group_comparison_individual) && group_comparison_individual == "attachment_type"){
     logger.info("Grouping by attachment...")
     
     if(is.null(survival_yr_start)){
       logger.info("... with summary table")
       
       # Ensure different conditions are present
-      non_na_unique <- unique(na.omit(summary_table$attachment))
+      non_na_unique <- unique(na.omit(summary_table$attachment_type))
       if (length(non_na_unique) <= 1) {
         if (length(non_na_unique) == 0) {
           logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
@@ -995,14 +995,14 @@ rFunction = function(data,
       # Clean data, remove NAs 
       n_original    <- nrow(summary_table)
       summary_table <- summary_table %>%
-        filter(!is.na(attachment)) %>%
-        mutate(attachment = str_trim(attachment),
-               attachment = str_replace_all(attachment, "\\s+", ""),
-               attachment = str_extract(attachment, "^[^|]+"),
-               attachment = str_replace(attachment, "–", "-"))
+        filter(!is.na(attachment_type)) %>%
+        mutate(attachment_type = str_trim(attachment_type),
+               attachment_type = str_replace_all(attachment_type, "\\s+", ""),
+               attachment_type = str_extract(attachment_type, "^[^|]+"),
+               attachment_type = str_replace(attachment_type, "–", "-"))
       
       # Get unique conditions after cleaning
-      unique_conditions <- sort(unique(summary_table$attachment))
+      unique_conditions <- sort(unique(summary_table$attachment_type))
       n_conditions <- length(unique_conditions)
       
       logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions,
@@ -1019,7 +1019,7 @@ rFunction = function(data,
       logger.info("... with summary table")
       
       # Ensure different conditions are present
-      non_na_unique <- unique(na.omit(yearly_survival$attachment))
+      non_na_unique <- unique(na.omit(yearly_survival$attachment_type))
       if (length(non_na_unique) <= 1) {
         if (length(non_na_unique) == 0) {
           logger.warn("Warning: The grouping variable is entirely NA; no comparison is possible.")
@@ -1031,14 +1031,14 @@ rFunction = function(data,
       # Clean data, remove NAs 
       n_original      <- nrow(yearly_survival)
       yearly_survival <- yearly_survival %>%
-        filter(!is.na(attachment)) %>%
-        mutate(attachment = str_trim(attachment),
-               attachment = str_replace_all(attachment, "\\s+", ""),
-               attachment = str_extract(attachment, "^[^|]+"),
-               attachment = str_replace(attachment, "–", "-"))
+        filter(!is.na(attachment_type)) %>%
+        mutate(attachment_type = str_trim(attachment_type),
+               attachment_type = str_replace_all(attachment_type, "\\s+", ""),
+               attachment_type = str_extract(attachment_type, "^[^|]+"),
+               attachment_type = str_replace(attachment_type, "–", "-"))
       
       # Get unique conditions after cleaning
-      unique_conditions <- sort(unique(yearly_survival$attachment))
+      unique_conditions <- sort(unique(yearly_survival$attachment_type))
       n_conditions      <- length(unique_conditions)
       
       logger.info(sprintf("%d attachment types detected after cleaning: %s", n_conditions, 

@@ -160,7 +160,7 @@
           "displayText": "Life stage"
         },
         {
-          "value": "attachment",
+          "value": "attachment_type",
           "displayText": "Attachment type"
         }, 
         {
