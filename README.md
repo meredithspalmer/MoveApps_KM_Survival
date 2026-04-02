@@ -2,7 +2,7 @@
 
 Github repository: 
 
-https://github.com/meredithspalmer/MoveApps_Survival
+https://github.com/meredithspalmer/MoveApps_KM_Survival
 
 ## Description
 
