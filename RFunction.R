@@ -35,6 +35,7 @@ rFunction = function(data,
   
   if(!is.null(animal_birth_hatch_year_table)){
     animal_birth_hatch_year_table <- read.csv(getAuxiliaryFilePath("animal_birth_hatch_year_table"))
+    logger.info("Auxiliary birth/hatch year data loaded.")
   }
   
   
@@ -458,8 +459,7 @@ rFunction = function(data,
   
   # Produce warning: Small proportion of deaths 
   if (n_mort_events <= 10) {
-    logger.warn(sprintf("Few (%d) deaths detected across entire dataset. Particularly if data is further subset, model may have low statistical power. This could potentially result in unreliable estimates and poor predictive capacity", n_mort_events),
-                call. = FALSE, immediate. = TRUE)
+    logger.warn(sprintf("Few (%d) deaths detected across entire dataset. Particularly if data is further subset, model may have low statistical power. This could potentially result in unreliable estimates and poor predictive capacity", n_mort_events), call. = FALSE, immediate. = TRUE)
   }
   
   
@@ -513,6 +513,8 @@ rFunction = function(data,
     min_year <- get_survival_year(date_range$min_ts)
     max_year <- get_survival_year(date_range$max_ts)
     possible_years <- seq(min_year, max_year, by = 1)
+    logger.info(sprintf("Survival years found in data: %d to %d (%d years total)",
+                        min_year, max_year, length(possible_years)))
     
     # Create all possible survival periods
     possible_periods <- tibble(survival_year = possible_years) %>%
@@ -634,13 +636,13 @@ rFunction = function(data,
       mutate(age       = survival_year - animal_birth_hatch_year,
              age       = as.integer(pmax(0, age)))
     
-    # repare thresholds from your existing table  
+    # Prepare thresholds from your existing table  
     thresholds <- animal_birth_hatch_year_table %>%
       filter(!is.na(year_at_start)) %>%           
       arrange(year_at_start) %>%
       distinct(year_at_start, animal_life_stage)
     
-    # Create a named vector for fast lookup
+    # Create a named vector for fast look-up
     stage_lookup <- setNames(thresholds$animal_life_stage,
                              thresholds$year_at_start)
     
@@ -658,6 +660,16 @@ rFunction = function(data,
                  pull(animal_life_stage) %>%
                  first(default = "adult"))) %>% 
       select(-matched_threshold)
+    
+    # Log age class summary
+    age_class_summary <- yearly_survival %>%
+      count(animal_life_stage_new) %>%
+      arrange(desc(n))
+    
+    logger.info(sprintf("Individuals by age class: %s",
+                        paste(sprintf("%s (n=%d)", age_class_summary$animal_life_stage_new,
+                                      age_class_summary$n),
+                              collapse = ", ")))
   
     } else {
       logger.info("Life stages not calculated.")
@@ -786,9 +798,9 @@ rFunction = function(data,
   
   if(!is.null(subset_condition_2)){
     if(is.null(survival_yr_start) && nrow(summary_table) == 0){
-      logger.fatal("There are no individuals meeting the both subsetting conditions.")
+      logger.fatal("There are no individuals meeting both subsetting conditions.")
     } else if(!is.null(survival_yr_start) && nrow(yearly_survival) == 0){
-      logger.fatal("There are no individuals meeting the both subsetting conditions.")
+      logger.fatal("There are no individuals meeting both subsetting conditions.")
     }
   }
   
@@ -1098,7 +1110,7 @@ rFunction = function(data,
   # Plot each individual's tracking history --- 
   
   if (is.null(survival_yr_start)) {
-    logger.info("Plotting tracking history using summary table")
+    logger.info("Plotting tracking history using summary table...")
     
     # Create deployment summary
     deployment_summary <- summary_table |>
@@ -1181,6 +1193,8 @@ rFunction = function(data,
     
     # Calculate monthly mortality
     if (calc_month_mort == TRUE) {
+      
+      logger.info("Plotting monthly mortality using summary table...")
       
       min_date <- min(summary_table$deploy_on_timestamp, na.rm = TRUE)
       max_date <- max(summary_table$deploy_off_timestamp, na.rm = TRUE)
@@ -1320,6 +1334,8 @@ rFunction = function(data,
     # Calculate monthly mortality 
     if (calc_month_mort == TRUE) {
       
+      logger.info("Plotting monthly mortality using yearly survival")
+      
       min_date <- min(yearly_survival$deploy_on_timestamp, na.rm = TRUE)
       max_date <- max(yearly_survival$deploy_off_timestamp, na.rm = TRUE)
       full_years <- seq(year(min_date), year(max_date), by = 1)
@@ -1387,7 +1403,7 @@ rFunction = function(data,
   
   if (is.null(survival_yr_start)) {
     
-    logger.info("Calculating KM using summary table:")
+    logger.info("Calculating KM using summary table...")
     
     # Warning for not mortality 
     if(sum(summary_table$mortality_event) > 0){
@@ -1408,7 +1424,7 @@ rFunction = function(data,
   
   if(!is.null(survival_yr_start)) {
     
-    logger.info("Calculating KM using survival table:")
+    logger.info("Calculating KM using survival table...")
     
     # Warning for no mortality 
     if(sum(yearly_survival$mortality_event) == 0){
