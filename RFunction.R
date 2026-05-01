@@ -636,8 +636,9 @@ summary_table <- events_with_ind |>
     
     # Calculate age and age_class
     yearly_survival <- yearly_survival %>%
-      mutate(age       = survival_year - animal_birth_hatch_year,
-             age       = as.integer(pmax(0, age)))
+      mutate(animal_birth_hatch_year = as.numeric(animal_birth_hatch_year),
+         age = survival_year - animal_birth_hatch_year,
+         age = as.integer(pmax(0, age)))
     
     # Prepare thresholds from your existing table  
     thresholds <- animal_birth_hatch_year_table %>%
