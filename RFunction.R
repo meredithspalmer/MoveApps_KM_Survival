@@ -631,14 +631,14 @@ summary_table <- events_with_ind |>
     
     # Confirm data exists 
     if (!"animal_birth_hatch_year" %in% names(yearly_survival)) {
-      logger.error("Column 'animal_birth_hatch_year' does not exist in the data frame. Cannot compute life stage.")
+      logger.warn("Column 'animal_birth_hatch_year' does not exist in the data frame. Cannot compute life stage.")
     }
     
     # Calculate age and age_class
     yearly_survival <- yearly_survival %>%
       mutate(animal_birth_hatch_year = as.numeric(animal_birth_hatch_year),
-         age = survival_year - animal_birth_hatch_year,
-         age = as.integer(pmax(0, age)))
+             age = survival_year - animal_birth_hatch_year,
+             age = as.integer(pmax(0, age)))
     
     # Prepare thresholds from your existing table  
     thresholds <- animal_birth_hatch_year_table %>%
@@ -650,19 +650,22 @@ summary_table <- events_with_ind |>
     stage_lookup <- setNames(thresholds$animal_life_stage,
                              thresholds$year_at_start)
     
+    # Pull stage for animals with unknown birth year from lookup table
+    na_stage <- animal_birth_hatch_year_table %>%
+      filter(is.na(year_at_start)) %>%
+      pull(animal_life_stage) %>%
+      first(default = "adult")
+    
     # Dynamic assignment 
     yearly_survival <- yearly_survival %>%
       mutate(matched_threshold = findInterval(age, thresholds$year_at_start),
              animal_life_stage_new = case_when(
-               is.na(age)                                ~ "unknown",           
-               matched_threshold == 0                    ~ "unknown",            
-               TRUE                                      ~ stage_lookup[matched_threshold]),
+               is.na(age)             ~ na_stage,           
+               matched_threshold == 0 ~ "unknown",            
+               TRUE                   ~ stage_lookup[matched_threshold]),
              animal_life_stage_new = coalesce(
                animal_life_stage_new,
-               animal_birth_hatch_year_table %>%
-                 filter(is.na(year_at_start)) %>%
-                 pull(animal_life_stage) %>%
-                 first(default = "adult"))) %>% 
+               na_stage)) %>%
       select(-matched_threshold)
     
     # Log age class summary
@@ -671,14 +674,14 @@ summary_table <- events_with_ind |>
       arrange(desc(n))
     
     logger.info(sprintf("Individuals by age class: %s",
-                        paste(sprintf("%s (n=%d)", age_class_summary$animal_life_stage_new,
-                                      age_class_summary$n),
-                              collapse = ", ")))
-  
-    } else {
-      logger.info("Life stages not calculated.")
-    }
-  
+                    paste(sprintf("%s (n=%d)", age_class_summary$animal_life_stage_new,
+                                  age_class_summary$n),
+                          collapse = ", ")))
+    
+  } else {
+    logger.info("Life stages not calculated.")
+  }
+           
   
   ## Subset based on condition (if selected) ----------------------------------
   
