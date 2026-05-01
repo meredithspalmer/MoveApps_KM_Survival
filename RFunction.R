@@ -1627,7 +1627,7 @@ summary_table <- events_with_ind |>
                          paste(removed_groups, collapse = "\n • ")), call. = FALSE)
     }
     
-    if (nrow(group_rows_clean == 1)){
+    if (nrow(group_rows_clean) == 1){
       logger.fatal("There is only one group left; unable to perform comparisons.")
       
     } else {
