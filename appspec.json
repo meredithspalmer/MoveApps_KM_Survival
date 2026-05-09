@@ -96,7 +96,7 @@
     {
       "id": "subset_condition_define_1",
       "name": "Define your subsetting condition",
-      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year (e.g., 2015, 2024). For other parameters, you will need the exact spelling,  capitalization, and/or formatting as your desired subset variable.",
+      "description": "Enter the factor of the above category you would like the subset your data on (e.g., `m` if `sex` is selected above, to include only male individuals). For 'survival year', enter the desired year (e.g., 2015, 2024). For other parameters, you will need the exact spelling, capitalization, and/or formatting as your desired subset variable.",
       "defaultValue": null,
       "type": "STRING"
     },
@@ -143,35 +143,9 @@
     {
       "id": "group_comparison_individual",
       "name": "Groups for comparison",
-      "description": "If interested in comparing across groups, identify the grouping variable. Note that `survival year` and `life stage` require entry of additional and/or auxiliary data.",
+      "description": "If interested in comparing across groups, identify the grouping variable. Enter the exact column name of your covariate of choice, or `survival_year` or `lifestage` for calculations based on user-defined variables (see below). Note that `survival year` and `life stage` require entry of additional and/or auxiliary data.",
       "defaultValue": null,
-      "type": "DROPDOWN",
-      "options": [
-        {
-          "value": null,
-          "displayText": "No comparison (all individuals)"
-        },
-        {
-          "value": "sex",
-          "displayText": "Sex"
-        },
-        {
-          "value": "lifestage",
-          "displayText": "Life stage"
-        },
-        {
-          "value": "attachment_type",
-          "displayText": "Attachment type"
-        }, 
-        {
-          "value": "model",
-          "displayText": "Model of tag"
-        }, 
-        {
-          "value": "survival_year",
-          "displayText": "Survival year (define below)"
-        }
-      ]
+      "type": "STRING"
     }, 
     {
       "id": "survival_yr_start",
@@ -208,8 +182,59 @@
           "value": true,
           "displayText": "Plot monthly mortality"
         }
-        ]
-      }
+      ]
+    }, 
+     {
+      "id": "calc_tracking_history",
+      "name": "Plot tracking history",
+      "description": "Select an option.",
+      "defaultValue": false,
+      "type": "RADIOBUTTONS",
+      "options": [
+        {
+        "value": false,
+        "displayText": "Do not plot monthly mortality"
+        },
+        {
+          "value": true,
+          "displayText": "Plot monthly mortality"
+        }
+      ]
+    }, 
+    {
+      "id": "add_cis",
+      "name": "Add confidence intervals",
+      "description": "Add 95% confidence bands to KM survival and cumulative hazard plots.",
+      "defaultValue": false,
+      "type": "RADIOBUTTONS",
+      "options": [
+        {
+        "value": false,
+        "displayText": "Do not add CIs"
+        },
+        {
+          "value": true,
+          "displayText": "Add CIs"
+        }
+      ]
+    }, 
+    {
+      "id": "zoom_to_plot",
+      "name": "Zoom to plot",
+      "description": "For KM survival and cumulative hazard plots, zoom the y-axis to the range of the data, rather than displaying the full 0–1 scale.",
+      "defaultValue": false,
+      "type": "RADIOBUTTONS",
+      "options": [
+        {
+        "value": false,
+        "displayText": "Do not zoom"
+        },
+        {
+          "value": true,
+          "displayText": "Zoom the y-axis"
+        }
+      ]
+    }
   ],
   "dependencies": {
     "R": [
@@ -224,6 +249,7 @@
       {"name": "tidyr"}, 
       {"name": "purrr"}, 
       {"name": "viridis"}, 
+      {"name": "ggpubr"},
       {"remotes": "install_git('https://github.com/tidyverse/forcats.git')"}
     ]
   },
