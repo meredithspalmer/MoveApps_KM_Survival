@@ -12,5 +12,8 @@
    "survival_yr_start"             : "2016-06-01T00:00:00Z",
    "animal_birth_hatch_year_table" : null, 
    "life_table_days"               : 30, 
-   "calc_month_mort"               : true
+   "calc_month_mort"               : true, 
+   "calc_tracking_history"         : true, 
+   "add_cis"                       : false, 
+   "zoom_to_plot"                  : true
 }
