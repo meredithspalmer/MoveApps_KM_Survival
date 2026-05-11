@@ -4,6 +4,10 @@ Github repository:
 
 https://github.com/meredithspalmer/MoveApps_Survival
 
+Artefact guide: 
+
+https://github.com/meredithspalmer/MoveApps_KM_Survival/blob/master/docs/KM_Survival_Artefacts_Guide.pdf
+
 ## Description
 
 Perform basic Kaplan-Meier survival analyses and optional group comparisons via the log-rank test.
@@ -93,6 +97,8 @@ Note that a larger sample size is required for comparison across groups.
 
 
 ### Artefacts
+
+For detailed descriptions of artefacts produced, please see: https://github.com/meredithspalmer/MoveApps_KM_Survival/blob/master/docs/KM_Survival_Artefacts_Guide.pdf
 
 **Tracking history**: Figure (`tracking_history.png`) detailing the start and end dates of each individual during the tracking period (with gaps in collaring noted), along with an indicator of how each individual was terminated (i.e., death, censored, survived). (*Optional*) 
 
