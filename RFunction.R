@@ -364,15 +364,15 @@ rFunction = function(data,
   # Define window 
   effective_start <- if (is.null(time_period_start)) {
     min(summary_table$deploy_on_timestamp, na.rm = TRUE)
-    } else {
-      time_period_start
-    }
+  } else {
+    time_period_start
+  }
   
   effective_end <- if (is.null(time_period_end)) {
     max(summary_table$deploy_off_timestamp, na.rm = TRUE)
-    } else {
-      time_period_end
-    }
+  } else {
+    time_period_end
+  }
   
   # Run updates 
   if(!is.null(time_period_start) | !is.null(time_period_end)){
@@ -405,9 +405,9 @@ rFunction = function(data,
   ## Calculate entry time and exit time (for staggered entry) ---
   origin_date <- if (is.null(time_period_start) || is.na(time_period_start)) {
     min(summary_table$deploy_on_timestamp, na.rm = TRUE)
-    } else {
-      time_period_start
-    }
+  } else {
+    time_period_start
+  }
   
   summary_table <- summary_table %>%
     mutate(analysis_entry_date = pmax(deploy_on_timestamp, effective_start, na.rm = TRUE),
@@ -765,10 +765,10 @@ rFunction = function(data,
                         paste(sprintf("%s (n=%d)", age_class_summary$animal_life_stage_new,
                                       age_class_summary$n),
                               collapse = ", ")))
-  
-    } else {
-      logger.info("Life stages not calculated.")
-    }
+    
+  } else {
+    logger.info("Life stages not calculated.")
+  }
   
   
   ## Subset based on condition (if selected) ----------------------------------
@@ -1279,7 +1279,7 @@ rFunction = function(data,
     lt.length.out <- ceiling(max_days / life_table_days) + 1   
     times <- round(seq(0, max_days, length.out = lt.length.out))
   }
-
+  
   # Generate life table ---
   s <- summary(km_fit, times = times)
   life_table <- data.frame(time_days        = s$time,
@@ -1323,17 +1323,26 @@ rFunction = function(data,
     for (yr_chr in names(survfit_list)) {
       fit <- survfit_list[[yr_chr]]
       s   <- summary(fit)
-      
-      # Take the last time point (end of year) as the annual survival estimate
       idx <- length(s$surv)
       
-      annual_surv_df <- rbind(annual_surv_df, data.frame(
-        Year       = as.integer(yr_chr),
-        AnnualSurv = s$surv[idx],
-        SE         = s$std.err[idx],
-        LCI        = s$lower[idx],
-        UCI        = s$upper[idx],
-        n          = fit$n))
+      if (idx == 0) {
+        # No mortality events this year — survival stayed at 1.0
+        annual_surv_df <- rbind(annual_surv_df, data.frame(
+          Year       = as.integer(yr_chr),
+          AnnualSurv = 1.0,
+          SE         = NA_real_,
+          LCI        = NA_real_,
+          UCI        = NA_real_,
+          n          = fit$n))
+      } else {
+        annual_surv_df <- rbind(annual_surv_df, data.frame(
+          Year       = as.integer(yr_chr),
+          AnnualSurv = s$surv[idx],
+          SE         = s$std.err[idx],
+          LCI        = s$lower[idx],
+          UCI        = s$upper[idx],
+          n          = fit$n))
+      }
     }
     
     annual_surv_df <- annual_surv_df[order(annual_surv_df$Year), ]
@@ -1772,7 +1781,7 @@ rFunction = function(data,
       
       if (any(singletons)) {
         logger.info(paste("Removed the following singleton group(s) (N=1):\n",
-                      paste(" •", removed, collapse = "\n ")), call. = FALSE)
+                          paste(" •", removed, collapse = "\n ")), call. = FALSE)
         
         # Filter data using clean group names
         data_clean <- data[!data[[grouping_var]] %in% removed, , drop = FALSE]
@@ -1989,8 +1998,8 @@ rFunction = function(data,
         width = 10, height = 8, units = "in", res = 300)
     print(cum_hazard_comp)
     dev.off()
-    }
-
+  }
+  
   # Pass original to the next app in the MoveApps workflow
   return(data)
 } 
