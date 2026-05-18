@@ -1305,19 +1305,18 @@ rFunction = function(data,
     # Loop through each survival year
     for (yr in unique(yearly_survival$survival_year)) {
       data_year <- subset(yearly_survival, survival_year == yr)
-      
       fit <- survfit(Surv(days_at_risk, mortality_event) ~ 1, data = data_year)
       survfit_list[[as.character(yr)]] <- fit
     }
     
     # Extract end-of-year survival probability from each survfit object
     annual_surv_df <- data.frame(
-      Year      = integer(),
+      Year       = integer(),
       AnnualSurv = numeric(),
-      SE        = numeric(),
-      LCI       = numeric(),
-      UCI       = numeric(),
-      n         = integer()
+      SE         = numeric(),
+      LCI        = numeric(),
+      UCI        = numeric(),
+      n          = integer()
     )
     
     for (yr_chr in names(survfit_list)) {
@@ -1325,15 +1324,18 @@ rFunction = function(data,
       s   <- summary(fit)
       idx <- length(s$surv)
       
+      # n at start of year: use first n.risk value if available, else fall back to fit$n
+      n_at_start <- if (length(s$n.risk) > 0) s$n.risk[1] else fit$n
+      
       if (idx == 0) {
-        # No mortality events this year — survival stayed at 1.0
+        logger.warn(sprintf("Year %s: no events detected; annual survival set to 1.0. Check data for this year.", yr_chr))
         annual_surv_df <- rbind(annual_surv_df, data.frame(
           Year       = as.integer(yr_chr),
           AnnualSurv = 1.0,
           SE         = NA_real_,
           LCI        = NA_real_,
           UCI        = NA_real_,
-          n          = fit$n))
+          n          = n_at_start))
       } else {
         annual_surv_df <- rbind(annual_surv_df, data.frame(
           Year       = as.integer(yr_chr),
@@ -1341,14 +1343,14 @@ rFunction = function(data,
           SE         = s$std.err[idx],
           LCI        = s$lower[idx],
           UCI        = s$upper[idx],
-          n          = fit$n))
+          n          = n_at_start))
       }
     }
     
     annual_surv_df <- annual_surv_df[order(annual_surv_df$Year), ]
     
-    write.csv(annual_surv_df, 
-              file = appArtifactPath("annual_survival_by_year.csv"), 
+    write.csv(annual_surv_df,
+              file      = appArtifactPath("annual_survival_by_year.csv"),
               row.names = FALSE)
   }
   
