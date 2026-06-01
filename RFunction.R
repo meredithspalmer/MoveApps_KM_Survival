@@ -913,202 +913,209 @@ rFunction = function(data,
   # Plot each individual's tracking history --- 
   
   if(calc_tracking_history == TRUE) {
+  
+  # Helper (base R, no extra packages)
+  clamp <- function(x, lo, hi) max(lo, min(hi, x))
+  
+  if (is.null(survival_yr_start)) {
+    logger.info("Plotting tracking history using summary table...")
     
-    # Helper (base R, no extra packages)
-    clamp <- function(x, lo, hi) max(lo, min(hi, x))
+    # Create deployment summary
+    deployment_summary <- summary_table |>
+      mutate(deploy_on  = as.POSIXct(deploy_on_timestamp),
+             deploy_off = as.POSIXct(deploy_off_timestamp),
+             duration_days = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
+      
+      filter(deploy_off > deploy_on,
+             !is.na(deploy_on),
+             !is.na(deploy_off)) |>
+      
+      group_by(individual_id, individual_local_identifier) |>          
+      mutate(first_start = min(deploy_on, na.rm = TRUE)) |>
+      ungroup() |>
+      
+      mutate(individual_label = fct_reorder(
+        paste(individual_id, individual_local_identifier, sep = " – "),
+        first_start)) |>
+      
+      arrange(first_start, deploy_on) |>
+      mutate(plot_start = deploy_on,
+             plot_end   = deploy_off)
     
-    if (is.null(survival_yr_start)) {
-      logger.info("Plotting tracking history using summary table...")
-      
-      # Create deployment summary
-      deployment_summary <- summary_table |>
-        mutate(deploy_on  = as.POSIXct(deploy_on_timestamp),
-               deploy_off = as.POSIXct(deploy_off_timestamp),
-               duration_days = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
-        
-        filter(deploy_off > deploy_on,
-               !is.na(deploy_on),
-               !is.na(deploy_off)) |>
-        
-        group_by(individual_id, individual_local_identifier) |>          
-        mutate(first_start = min(deploy_on, na.rm = TRUE) ) |>
-        ungroup() |>
-        
-        mutate(individual_label = fct_reorder(
-          paste(individual_id, individual_local_identifier, sep = " – "),
-          first_start)) |>
-        
-        arrange(first_start, deploy_on) |>
-        mutate(plot_start = deploy_on,
-               plot_end   = deploy_off)
-      
-      # Total location count
-      n_locs_total <- summary_table |>
-        summarise(total = sum(n_locations, na.rm = TRUE)) |>
-        pull(total)
-      
-      # Gap detection
-      deployment_summary_with_gaps <- deployment_summary |>
-        group_by(individual_label) |>
-        arrange(plot_start) |>
-        mutate(prev_end  = lag(plot_end),
-               gap_start = prev_end,
-               gap_end   = plot_start,
-               gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
-        filter(gap_days > 30, !is.na(gap_days)) |>
-        ungroup()
-      
-      # Build the plot  
-      tracking_history <- ggplot(deployment_summary) +
-        geom_segment(aes(x = plot_start, xend = plot_end,
-                         y = individual_label, yend = individual_label),
-                     linewidth = 3.2, color = "grey") +
-        geom_point(aes(x = plot_start, y = individual_label),
-                   color = "#1F77B4", size = 3.5) +
-        geom_point(aes(x = plot_end, y = individual_label),
-                   color = "#9467BD", size = 3.5) +
-        geom_segment(data = deployment_summary_with_gaps,
-                     aes(x = gap_start + (gap_end - gap_start)/2,
-                         xend = gap_start + (gap_end - gap_start)/2,
-                         y = as.numeric(individual_label),
-                         yend = as.numeric(individual_label) + 0.45),
-                     color = "grey50", linewidth = 1.2,
-                     arrow = arrow(length = unit(0.18, "cm"), type = "closed")) +
-        labs(title = "Individual Collared Periods",
-             subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
-                                n_distinct(deployment_summary$individual_id),
-                                nrow(deployment_summary),
-                                n_locs_total),
-             x = "Time",
-             y = "Individual") +
-        theme_minimal(base_size = 12) +
-        theme(axis.text.y = element_text(size = 8, face = "plain"),
-              panel.grid.major.y = element_blank(),
-              panel.grid.minor = element_blank(),
-              plot.title = element_text(face = "bold", size = 14),
-              plot.subtitle = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
-              axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-              axis.title = element_text(size = 12)) +
-        scale_x_datetime(date_breaks = "1 year",
-                         date_labels = "%Y",
-                         expand = expansion(mult = c(0.01, 0.03)))
-      
-      # Dynamic dimensions based on data
-      n_individuals <- n_distinct(deployment_summary$individual_id)
-      time_range_years <- as.numeric(difftime(max(deployment_summary$plot_end), 
-                                              min(deployment_summary$plot_start), 
-                                              units = "days")) / 365.25
-      
-      # Height: base + per-individual allowance, clamped to reasonable bounds
-      plot_height <- clamp(2 + n_individuals * 0.18, 5, 40)
-      
-      # Width: base + per-year allowance, clamped to reasonable bounds
-      plot_width  <- clamp(4 + time_range_years * 1.2, 7, 24)
-      
-      # Save plot
-      png(appArtifactPath("tracking_history.png"),
-          width  = plot_width,
-          height = plot_height,
-          units  = "in", res = 300)
-      print(tracking_history)
-      dev.off()
-      
-    }
+    # Total location count
+    n_locs_total <- summary_table |>
+      summarise(total = sum(n_locations, na.rm = TRUE)) |>
+      pull(total)
     
-    if (!is.null(survival_yr_start)) {
-      logger.info("Plotting tracking history using yearly survival")
-      
-      deployment_summary <- yearly_survival |>
-        distinct(individual_id,
-                 individual_local_identifier,
-                 deploy_on_timestamp,
-                 deploy_off_timestamp) |>
-        mutate(deploy_on  = as.POSIXct(deploy_on_timestamp),
-               deploy_off = as.POSIXct(deploy_off_timestamp),
-               duration_days = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
-        filter(deploy_off > deploy_on,
-               !is.na(deploy_on),
-               !is.na(deploy_off)) |>
-        group_by(individual_id) |>
-        mutate(first_start = min(deploy_on, na.rm = TRUE),
-               individual_label = fct_reorder(paste(individual_id, individual_local_identifier, sep = " – "),
-                                              first_start)) |>
-        ungroup() |>
-        arrange(first_start, deploy_on) |>
-        mutate(plot_start = deploy_on,
-               plot_end   = deploy_off)
-      
-      # Total location count 
-      n_locs_total <- yearly_survival |>
-        distinct(individual_id, n_locations) |>
-        summarise(total = sum(n_locations, na.rm = TRUE)) |>
-        pull(total)
-      
-      # Plot 
-      tracking_history <- ggplot(deployment_summary) +
-        geom_segment(aes(x = plot_start, xend = plot_end,
-                         y = individual_label, yend = individual_label),
-                     linewidth = 3.2, color = "grey") +
-        geom_point(aes(x = plot_start, y = individual_label),
-                   color = "#1F77B4", size = 3.5) +
-        geom_point(aes(x = plot_end, y = individual_label),
-                   color = "#9467BD", size = 3.5) +
-        geom_segment(data = deployment_summary |>
-                       group_by(individual_label) |>
-                       arrange(plot_start) |>
-                       mutate(prev_end  = lag(plot_end),
-                              gap_start = prev_end,
-                              gap_end   = plot_start,
-                              gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
-                       filter(gap_days > 30, !is.na(gap_days)),
-                     aes(x = gap_start + (gap_end - gap_start)/2,
-                         xend = gap_start + (gap_end - gap_start)/2,
-                         y = as.numeric(individual_label),
-                         yend = as.numeric(individual_label) + 0.45),
-                     color = "grey50", linewidth = 1.2,
-                     arrow = arrow(length = unit(0.18, "cm"), type = "closed")) +
-        labs(title    = paste0("Individual Collared Periods"),
-             subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
-                                n_distinct(deployment_summary$individual_id),
-                                nrow(deployment_summary),
-                                n_locs_total),
-             x = "Time",
-             y = "Individual") +
-        theme_minimal(base_size = 12) +
-        theme(axis.text.y        = element_text(size = 8, face = "plain"),
-              panel.grid.major.y = element_blank(),
-              panel.grid.minor   = element_blank(),
-              plot.title         = element_text(face = "bold", size = 14),
-              plot.subtitle      = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
-              axis.text.x        = element_text(angle = 45, hjust = 1, vjust = 1),
-              axis.title         = element_text(size = 12)) +
-        scale_x_datetime(date_breaks = "1 year",
-                         date_labels = "%Y",
-                         expand      = expansion(mult = c(0.01, 0.03)))
-      
-      # Dynamic dimensions based on data
-      n_individuals <- n_distinct(deployment_summary$individual_id)
-      time_range_years <- as.numeric(difftime(max(deployment_summary$plot_end), 
-                                              min(deployment_summary$plot_start), 
-                                              units = "days")) / 365.25
-      
-      # Height: base + per-individual allowance, clamped to reasonable bounds
-      plot_height <- clamp(2 + n_individuals * 0.18, 5, 40)
-      
-      # Width: base + per-year allowance, clamped to reasonable bounds
-      plot_width  <- clamp(4 + time_range_years * 1.2, 7, 24)
-      
-      # Save plot
-      png(appArtifactPath("tracking_history.png"),
-          width  = plot_width,
-          height = plot_height,
-          units  = "in", res = 300)
-      print(tracking_history)
-      dev.off()
-      
-    } 
+    # Gap detection
+    deployment_summary_with_gaps <- deployment_summary |>
+      group_by(individual_label) |>
+      arrange(plot_start) |>
+      mutate(prev_end  = lag(plot_end),
+             gap_start = prev_end,
+             gap_end   = plot_start,
+             gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
+      filter(gap_days > 30, !is.na(gap_days)) |>
+      ungroup()
+    
+    # Build the plot  
+    tracking_history <- ggplot(deployment_summary) +
+      geom_segment(aes(x = plot_start, xend = plot_end,
+                       y = individual_label, yend = individual_label),
+                   linewidth = 3.2, color = "grey") +
+      geom_point(aes(x = plot_start, y = individual_label),
+                 color = "#1F77B4", size = 3.5) +
+      geom_point(aes(x = plot_end, y = individual_label,
+                     color = factor(mortality_event)),
+                 size = 3.5) +
+      scale_color_manual(
+        values = c("0" = "#9467BD", "1" = "red"),
+        labels = c("0" = "Censored", "1" = "Mortality"),
+        name   = "End event") +
+      geom_segment(data = deployment_summary_with_gaps,
+                   aes(x = gap_start + (gap_end - gap_start)/2,
+                       xend = gap_start + (gap_end - gap_start)/2,
+                       y = as.numeric(individual_label),
+                       yend = as.numeric(individual_label) + 0.45),
+                   color = "grey50", linewidth = 1.2,
+                   arrow = arrow(length = unit(0.18, "cm"), type = "closed")) +
+      labs(title = "Individual Collared Periods",
+           subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
+                              n_distinct(deployment_summary$individual_id),
+                              nrow(deployment_summary),
+                              n_locs_total),
+           x = "Time",
+           y = "Individual") +
+      theme_minimal(base_size = 12) +
+      theme(axis.text.y = element_text(size = 8, face = "plain"),
+            panel.grid.major.y = element_blank(),
+            panel.grid.minor = element_blank(),
+            plot.title = element_text(face = "bold", size = 14),
+            plot.subtitle = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
+            axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title = element_text(size = 12)) +
+      scale_x_datetime(date_breaks = "1 year",
+                       date_labels = "%Y",
+                       expand = expansion(mult = c(0.01, 0.03)))
+    
+    # Dynamic dimensions based on data
+    n_individuals <- n_distinct(deployment_summary$individual_id)
+    time_range_years <- as.numeric(difftime(max(deployment_summary$plot_end), 
+                                            min(deployment_summary$plot_start), 
+                                            units = "days")) / 365.25
+    
+    plot_height <- clamp(2 + n_individuals * 0.18, 5, 40)
+    plot_width  <- clamp(4 + time_range_years * 1.2, 7, 24)
+    
+    png(appArtifactPath("tracking_history.png"),
+        width  = plot_width,
+        height = plot_height,
+        units  = "in", res = 300)
+    print(tracking_history)
+    dev.off()
+    
   }
   
+  if (!is.null(survival_yr_start)) {
+    logger.info("Plotting tracking history using yearly survival")
+    
+    # Pull each individual's overall mortality status (1 if ever died)
+    mortality_status <- yearly_survival |>
+      group_by(individual_id) |>
+      summarise(mortality_event = max(mortality_event, na.rm = TRUE), .groups = "drop")
+    
+    deployment_summary <- yearly_survival |>
+      distinct(individual_id,
+               individual_local_identifier,
+               deploy_on_timestamp,
+               deploy_off_timestamp) |>
+      left_join(mortality_status, by = "individual_id") |>
+      mutate(deploy_on  = as.POSIXct(deploy_on_timestamp),
+             deploy_off = as.POSIXct(deploy_off_timestamp),
+             duration_days = round(as.numeric(difftime(deploy_off, deploy_on, units = "days")), 1)) |>
+      filter(deploy_off > deploy_on,
+             !is.na(deploy_on),
+             !is.na(deploy_off)) |>
+      group_by(individual_id) |>
+      mutate(first_start = min(deploy_on, na.rm = TRUE),
+             individual_label = fct_reorder(paste(individual_id, individual_local_identifier, sep = " – "),
+                                            first_start)) |>
+      ungroup() |>
+      arrange(first_start, deploy_on) |>
+      mutate(plot_start = deploy_on,
+             plot_end   = deploy_off)
+    
+    # Total location count 
+    n_locs_total <- yearly_survival |>
+      distinct(individual_id, n_locations) |>
+      summarise(total = sum(n_locations, na.rm = TRUE)) |>
+      pull(total)
+    
+    # Plot 
+    tracking_history <- ggplot(deployment_summary) +
+      geom_segment(aes(x = plot_start, xend = plot_end,
+                       y = individual_label, yend = individual_label),
+                   linewidth = 3.2, color = "grey") +
+      geom_point(aes(x = plot_start, y = individual_label),
+                 color = "#1F77B4", size = 3.5) +
+      geom_point(aes(x = plot_end, y = individual_label,
+                     color = factor(mortality_event)),
+                 size = 3.5) +
+      scale_color_manual(
+        values = c("0" = "#9467BD", "1" = "red"),
+        labels = c("0" = "Censored", "1" = "Mortality"),
+        name   = "End event") +
+      geom_segment(data = deployment_summary |>
+                     group_by(individual_label) |>
+                     arrange(plot_start) |>
+                     mutate(prev_end  = lag(plot_end),
+                            gap_start = prev_end,
+                            gap_end   = plot_start,
+                            gap_days  = as.numeric(difftime(gap_end, gap_start, units = "days"))) |>
+                     filter(gap_days > 30, !is.na(gap_days)),
+                   aes(x = gap_start + (gap_end - gap_start)/2,
+                       xend = gap_start + (gap_end - gap_start)/2,
+                       y = as.numeric(individual_label),
+                       yend = as.numeric(individual_label) + 0.45),
+                   color = "grey50", linewidth = 1.2,
+                   arrow = arrow(length = unit(0.18, "cm"), type = "closed")) +
+      labs(title    = "Individual Collared Periods",
+           subtitle = sprintf("%d unique individuals • %d visible deployments • %d locations",
+                              n_distinct(deployment_summary$individual_id),
+                              nrow(deployment_summary),
+                              n_locs_total),
+           x = "Time",
+           y = "Individual") +
+      theme_minimal(base_size = 12) +
+      theme(axis.text.y        = element_text(size = 8, face = "plain"),
+            panel.grid.major.y = element_blank(),
+            panel.grid.minor   = element_blank(),
+            plot.title         = element_text(face = "bold", size = 14),
+            plot.subtitle      = element_text(size = 11, color = "grey50", margin = margin(b = 10)),
+            axis.text.x        = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title         = element_text(size = 12)) +
+      scale_x_datetime(date_breaks = "1 year",
+                       date_labels = "%Y",
+                       expand      = expansion(mult = c(0.01, 0.03)))
+    
+    # Dynamic dimensions based on data
+    n_individuals <- n_distinct(deployment_summary$individual_id)
+    time_range_years <- as.numeric(difftime(max(deployment_summary$plot_end), 
+                                            min(deployment_summary$plot_start), 
+                                            units = "days")) / 365.25
+    
+    plot_height <- clamp(2 + n_individuals * 0.18, 5, 40)
+    plot_width  <- clamp(4 + time_range_years * 1.2, 7, 24)
+    
+    png(appArtifactPath("tracking_history.png"),
+        width  = plot_width,
+        height = plot_height,
+        units  = "in", res = 300)
+    print(tracking_history)
+    dev.off()
+    
+  } 
+}
   
   # Calculate monthly mortality ---- 
   if (calc_month_mort == TRUE) {
