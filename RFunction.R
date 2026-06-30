@@ -703,6 +703,7 @@ rFunction = function(data,
       arrange(individual_id, survival_year)
     
   } else {
+    yearly_survival <- NULL    
     logger.info("Survival years not calculated.")
   }
   
@@ -798,15 +799,15 @@ rFunction = function(data,
       } else {
         summary_table <- summary_table %>% filter(.data[[spec$col]] == value)
       }
+      return(list(summary_table = summary_table, yearly_survival = NULL))
     } else {
       if (!spec$yearly_ok) {
         logger.fatal("This subset only makes sense when data are processed by survival year. Please enter survival year start date.")
       } else {
         yearly_survival <- yearly_survival %>% filter(.data[[spec$col]] == value)
       }
+      return(list(summary_table = summary_table, yearly_survival = yearly_survival))
     }
-    
-    list(summary_table = summary_table, yearly_survival = yearly_survival)
   }
   
   # SUBSET CONDITION 1 ---
